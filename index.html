@@ -2,15 +2,27 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Neon Beat - Ultra Max</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Neon Beat - Precision Pro</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap');
 
-        * { -webkit-tap-highlight-color: transparent; outline: none; box-sizing: border-box; }
-        body { margin: 0; background: #000; color: white; overflow: hidden; font-family: 'Orbitron', sans-serif; touch-action: none; }
-        
-        /* 背景網格特效 */
+        /* 防止縮放與長按彈出菜單 */
+        * { 
+            -webkit-tap-highlight-color: transparent; 
+            -webkit-touch-callout: none; 
+            -webkit-user-select: none; 
+            user-select: none; 
+            outline: none; 
+            box-sizing: border-box;
+            touch-action: none; /* 核心修正：防止縮放與手勢 */
+        }
+
+        body { 
+            margin: 0; background: #000; color: white; overflow: hidden; 
+            font-family: 'Orbitron', sans-serif; position: fixed; width: 100%; height: 100%;
+        }
+
         #bg-grid {
             position: absolute; inset: 0;
             background-image: linear-gradient(rgba(0, 255, 255, 0.05) 1px, transparent 1px),
@@ -23,38 +35,40 @@
         }
         @keyframes grid-move { from { background-position: 0 0; } to { background-position: 0 50px; } }
 
-        /* UI 元件 */
         #ui { position: absolute; top: 40px; width: 100%; text-align: center; pointer-events: none; z-index: 10; }
-        #score-display { font-size: 14px; letter-spacing: 3px; opacity: 0.8; margin: 0; }
-        #combo { font-size: 80px; font-weight: 900; margin: 0; text-shadow: 0 0 20px #0ff, 0 0 40px #0ff; }
+        #score-display { font-size: 14px; letter-spacing: 3px; color: #0ff; margin: 0; }
+        #combo { font-size: 80px; font-weight: 900; margin: 0; text-shadow: 0 0 20px #0ff; }
         
-        /* 倒數計時器 */
         #timer-container {
-            position: absolute; top: 20px; right: 20px; width: 150px; text-align: right; z-index: 15;
+            position: absolute; top: 20px; right: 20px; width: 120px; z-index: 15;
         }
-        #time-text { font-size: 18px; color: #0ff; font-weight: bold; margin-bottom: 5px; }
-        #progress-bar { width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; }
-        #progress-fill { width: 100%; height: 100%; background: #0ff; box-shadow: 0 0 10px #0ff; transition: width 0.5s linear; }
+        #time-text { font-size: 14px; color: #0ff; text-align: right; margin-bottom: 4px; }
+        #progress-bar { width: 100%; height: 3px; background: rgba(255,255,255,0.1); }
+        #progress-fill { width: 0%; height: 100%; background: #0ff; box-shadow: 0 0 10px #0ff; }
 
-        /* 按鈕佈局優化 (平板大按鈕) */
+        /* 按鈕優化 (平板大按鈕) */
         #touch-controls { 
             position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
             display: flex; justify-content: center; z-index: 20;
         }
         .touch-btn {
-            height: 100px; /* 加高按鈕 */
-            margin: 0 8px; border: 2px solid rgba(0, 255, 255, 0.3); border-radius: 15px;
+            height: 110px; margin: 0 8px; border: 2px solid rgba(0, 255, 255, 0.3); border-radius: 15px;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            background: rgba(0, 40, 40, 0.4); backdrop-filter: blur(10px); transition: 0.05s;
+            background: rgba(0, 40, 40, 0.6); backdrop-filter: blur(10px); transition: 0.05s;
         }
-        .touch-btn span { font-size: 28px; font-weight: 900; color: #fff; }
-        .touch-btn small { font-size: 10px; color: #0ff; margin-top: 5px; }
-        .touch-btn.active { background: #0ff; border-color: #fff; box-shadow: 0 0 40px #0ff; transform: translateY(5px) scale(0.95); }
+        .touch-btn span { font-size: 32px; font-weight: 900; color: #fff; }
+        .touch-btn.active { background: #0ff; border-color: #fff; transform: translateY(5px) scale(0.95); }
         .touch-btn.active span { color: #000; }
 
-        .overlay { position: absolute; inset: 0; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; }
-        .diff-btn { padding: 15px 50px; font-size: 18px; cursor: pointer; background: none; color: #0ff; border: 2px solid #0ff; margin: 10px; font-family: 'Orbitron'; transition: 0.3s; }
-        .diff-btn:hover { background: #0ff; color: #000; }
+        /* 選單與難度選擇 */
+        .overlay { position: absolute; inset: 0; background: radial-gradient(circle, #001f3f 0%, #000 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; }
+        .diff-group { display: flex; gap: 10px; margin-top: 20px; }
+        .diff-btn { 
+            padding: 15px 30px; font-size: 16px; cursor: pointer; background: none; 
+            color: #0ff; border: 2px solid #0ff; font-family: 'Orbitron'; transition: 0.3s; 
+        }
+        .diff-btn:hover { background: rgba(0, 255, 255, 0.2); }
+        .diff-btn.active { background: #0ff; color: #000; }
     </style>
 </head>
 <body>
@@ -62,8 +76,14 @@
     <div id="bg-grid"></div>
 
     <div id="start-overlay" class="overlay">
-        <h1 style="font-size: 50px; text-shadow: 0 0 20px #0ff;">NEON BEAT</h1>
-        <button class="diff-btn" onclick="initGame('normal')">START MISSION</button>
+        <h1 style="font-size: 50px; text-shadow: 0 0 20px #0ff; margin-bottom: 10px;">NEON BEAT</h1>
+        <p style="color: #0ff; letter-spacing: 5px;">SELECT DIFFICULTY</p>
+        <div class="diff-group">
+            <button class="diff-btn" onclick="setDiff('easy', this)">EASY</button>
+            <button class="diff-btn active" onclick="setDiff('normal', this)">NORMAL</button>
+            <button class="diff-btn" onclick="setDiff('hard', this)">HARD</button>
+        </div>
+        <button class="diff-btn" style="margin-top: 40px; width: 200px; background: #0ff; color: #000;" onclick="startGame()">START</button>
     </div>
 
     <div id="timer-container">
@@ -74,46 +94,61 @@
     <div id="ui">
         <p id="score-display">DATA SYNCED</p>
         <p id="combo">0</p>
-        <div id="judgement" style="height: 40px; font-weight: bold; font-size: 24px;"></div>
+        <div id="judgement" style="height: 40px; font-weight: 900; color: #0ff;"></div>
     </div>
 
     <canvas id="gameCanvas"></canvas>
 
     <div id="touch-controls">
-        <div class="touch-btn" id="btn-0"><span>D</span><small>L-TRACK</small></div>
-        <div class="touch-btn" id="btn-1"><span>F</span><small>L-BEAT</small></div>
-        <div class="touch-btn" id="btn-2"><span>J</span><small>R-BEAT</small></div>
-        <div class="touch-btn" id="btn-3"><span>K</span><small>R-TRACK</small></div>
+        <div class="touch-btn" id="btn-0"><span>D</span></div>
+        <div class="touch-btn" id="btn-1"><span>F</span></div>
+        <div class="touch-btn" id="btn-2"><span>J</span></div>
+        <div class="touch-btn" id="btn-3"><span>K</span></div>
     </div>
 
 <script>
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const comboEl = document.getElementById('combo');
+const judgeEl = document.getElementById('judgement');
 const timeText = document.getElementById('time-text');
 const progFill = document.getElementById('progress-fill');
 
+// --- 遊戲設定 ---
 let laneWidth, startX, judgeY;
 const LANES = 4;
 const COLORS = ['#FF0055', '#00FBFF', '#BCFF00', '#FF9500'];
 const LANE_KEYS = ['d', 'f', 'j', 'k'];
 
-let audioCtx, analyser, dataArray, audio;
+let NOTE_SPEED = 0.8;
+let BEAT_SENSITIVITY = 1.3; // 判定靈敏度
+let BEAT_COOLDOWN = 250;
+const LEAD_TIME = 1200;
+
+let audioCtx, analyser, dataArray, delayNode, audio;
 let startTime = 0, isPlaying = false, combo = 0, score = 0, lastBeatTime = 0;
 let notes = [], activeKeys = [false, false, false, false], hitEffects = [];
+let energyHistory = [];
 
-function initGame() {
-    resize();
-    setupAudio();
-    window.addEventListener('resize', resize);
+// 防止雙擊縮放
+document.addEventListener('touchstart', (e) => {
+    if (e.touches.length > 1) e.preventDefault();
+}, { passive: false });
+
+function setDiff(mode, btn) {
+    document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    if (mode === 'easy') { BEAT_SENSITIVITY = 1.5; BEAT_COOLDOWN = 400; NOTE_SPEED = 0.6; }
+    else if (mode === 'normal') { BEAT_SENSITIVITY = 1.3; BEAT_COOLDOWN = 250; NOTE_SPEED = 0.8; }
+    else if (mode === 'hard') { BEAT_SENSITIVITY = 1.15; BEAT_COOLDOWN = 180; NOTE_SPEED = 1.1; }
 }
 
 function resize() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
-    laneWidth = Math.min(120, canvas.width / 4.2); // 平板尺寸優化
+    laneWidth = Math.min(130, canvas.width / 4.2);
     startX = (canvas.width - (laneWidth * LANES)) / 2;
-    judgeY = canvas.height * 0.70; // 判定線往上移動 (原 0.78 -> 0.70)
+    judgeY = canvas.height * 0.70;
 
     const controls = document.getElementById('touch-controls');
     controls.style.width = `${laneWidth * LANES}px`;
@@ -122,16 +157,25 @@ function resize() {
     });
 }
 
-async function setupAudio() {
+async function startGame() {
+    resize();
+    window.addEventListener('resize', resize);
+    
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     analyser = audioCtx.createAnalyser();
-    
+    analyser.fftSize = 256;
+    dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+    delayNode = audioCtx.createDelay(2.0);
+    delayNode.delayTime.value = LEAD_TIME / 1000;
+
     audio = new Audio('your_music.mp3'); 
     audio.crossOrigin = "anonymous";
     
     const source = audioCtx.createMediaElementSource(audio);
     source.connect(analyser);
-    analyser.connect(audioCtx.destination);
+    analyser.connect(delayNode);
+    delayNode.connect(audioCtx.destination);
 
     await audio.play();
     document.getElementById('start-overlay').style.display = 'none';
@@ -140,76 +184,78 @@ async function setupAudio() {
     requestAnimationFrame(gameLoop);
 }
 
-function updateTimer() {
-    if (!audio.duration) return;
-    const remain = Math.max(0, audio.duration - audio.currentTime);
-    const m = Math.floor(remain / 60);
-    const s = Math.floor(remain % 60);
-    timeText.innerText = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
-    progFill.style.width = `${(remain / audio.duration) * 100}%`;
-}
-
 function gameLoop() {
     if(!isPlaying) return;
     const now = performance.now() - startTime;
-    updateTimer();
 
-    // 音訊偵測邏輯...
-    analyser.fftSize = 256;
-    let data = new Uint8Array(analyser.frequencyBinCount);
-    analyser.getByteFrequencyData(data);
-    let avg = data.slice(0, 5).reduce((a,b)=>a+b)/5;
+    // 1. 節拍偵測演算法 (歷史能量對比法)
+    analyser.getByteFrequencyData(dataArray);
+    let lowFreqEnergy = 0;
+    for (let i = 0; i < 8; i++) lowFreqEnergy += dataArray[i];
+    const currentEnergy = lowFreqEnergy / 8;
 
-    if (avg > 210 && (now - lastBeatTime) > 200) {
-        notes.push({ targetTime: now + 1200, lane: Math.floor(Math.random()*4), hit: false });
+    const avgHistory = energyHistory.length > 0 
+        ? energyHistory.reduce((a, b) => a + b) / energyHistory.length 
+        : 100;
+
+    if (currentEnergy > avgHistory * BEAT_SENSITIVITY && currentEnergy > 100 && (now - lastBeatTime) > BEAT_COOLDOWN) {
+        notes.push({ targetTime: now + LEAD_TIME, lane: Math.floor(Math.random()*4), hit: false });
         lastBeatTime = now;
     }
+    energyHistory.push(currentEnergy);
+    if (energyHistory.length > 30) energyHistory.shift();
 
+    // 2. 更新時間 UI
+    if (audio.duration) {
+        const elapsed = audio.currentTime;
+        const total = audio.duration;
+        const m = Math.floor(elapsed / 60);
+        const s = Math.floor(elapsed % 60);
+        timeText.innerText = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+        progFill.style.width = `${(elapsed / total) * 100}%`;
+    }
+
+    // 3. 繪製
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // 繪製軌道光束
     LANE_KEYS.forEach((_, i) => {
-        const x = startX + i * laneWidth;
-        if (activeKeys[i]) {
-            let g = ctx.createLinearGradient(0, judgeY, 0, 0);
-            g.addColorStop(0, COLORS[i] + '66');
-            g.addColorStop(1, 'transparent');
-            ctx.fillStyle = g;
-            ctx.fillRect(x + 5, 0, laneWidth - 10, judgeY);
-        }
+        const x = startstartX = startX + i * laneWidth;
         // 判定線
         ctx.strokeStyle = activeKeys[i] ? '#fff' : COLORS[i] + '88';
-        ctx.lineWidth = 4;
+        ctx.lineWidth = activeKeys[i] ? 6 : 3;
         ctx.strokeRect(x + 5, judgeY, laneWidth - 10, 2);
     });
 
-    // 繪製音符
+    // 音符繪製
     notes.forEach(n => {
         if (n.hit) return;
         const timeDiff = n.targetTime - now;
-        const y = judgeY - (timeDiff * 0.8);
+        const y = judgeY - (timeDiff * NOTE_SPEED);
         const x = startX + n.lane * laneWidth + 10;
         
-        if (y > -20 && y < canvas.height) {
+        if (y > -50 && y < canvas.height) {
             ctx.fillStyle = COLORS[n.lane];
-            ctx.shadowBlur = 20; ctx.shadowColor = COLORS[n.lane];
+            ctx.shadowBlur = 15; ctx.shadowColor = COLORS[n.lane];
             ctx.beginPath();
-            ctx.roundRect(x, y - 10, laneWidth - 20, 20, 5);
+            ctx.roundRect(x, y - 12, laneWidth - 20, 24, 6);
             ctx.fill();
             ctx.shadowBlur = 0;
         }
-        if (timeDiff < -150) { n.hit = true; combo = 0; comboEl.innerText = 0; }
+        if (timeDiff < -150) { 
+            n.hit = true; combo = 0; comboEl.innerText = 0; 
+            judgeEl.innerText = "MISS"; judgeEl.style.color = "#ff4d4d";
+        }
     });
 
-    // 擊中波紋特效
+    // 波紋特效
     hitEffects.forEach((eff, i) => {
         ctx.beginPath();
         ctx.arc(eff.x, eff.y, eff.r, 0, Math.PI*2);
         ctx.strokeStyle = eff.c;
         ctx.globalAlpha = eff.a;
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 4;
         ctx.stroke();
-        eff.r += 5; eff.a -= 0.05;
+        eff.r += 6; eff.a -= 0.04;
         if(eff.a <= 0) hitEffects.splice(i, 1);
     });
     ctx.globalAlpha = 1.0;
@@ -218,23 +264,35 @@ function gameLoop() {
 }
 
 function handleInput(index, isDown) {
+    if (index < 0) return;
     activeKeys[index] = isDown;
     document.getElementById(`btn-${index}`).classList.toggle('active', isDown);
     if (isDown && isPlaying) {
         const now = performance.now() - startTime;
-        const nIdx = notes.findIndex(n => !n.hit && n.lane === index && Math.abs(n.targetTime - now) < 150);
+        const nIdx = notes.findIndex(n => !n.hit && n.lane === index && Math.abs(n.targetTime - now) < 160);
         if (nIdx !== -1) {
             notes[nIdx].hit = true;
-            combo++; comboEl.innerText = combo;
+            combo++; score += 100;
+            comboEl.innerText = combo;
+            judgeEl.innerText = "PERFECT"; judgeEl.style.color = "#0ff";
             hitEffects.push({ x: startX + index * laneWidth + laneWidth/2, y: judgeY, r: 10, a: 1.0, c: COLORS[index] });
         }
     }
 }
 
+// 監聽按鍵與觸控
 LANE_KEYS.forEach((_, i) => {
     const b = document.getElementById(`btn-${i}`);
     b.addEventListener('touchstart', (e) => { e.preventDefault(); handleInput(i, true); });
     b.addEventListener('touchend', (e) => { e.preventDefault(); handleInput(i, false); });
+});
+window.addEventListener('keydown', (e) => {
+    const i = LANE_KEYS.indexOf(e.key.toLowerCase());
+    if(i !== -1 && !activeKeys[i]) handleInput(i, true);
+});
+window.addEventListener('keyup', (e) => {
+    const i = LANE_KEYS.indexOf(e.key.toLowerCase());
+    if(i !== -1) handleInput(i, false);
 });
 </script>
 </body>
