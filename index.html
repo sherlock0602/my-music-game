@@ -3,79 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Web Rhythm Master - GitHub Edition</title>
+    <title>Neon Beat - Stable Version</title>
     <style>
-        body { margin: 0; background: #050505; color: white; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { margin: 0; background: #050505; color: white; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
         canvas { display: block; }
-        #ui { position: absolute; top: 20px; width: 100%; text-align: center; pointer-events: none; text-shadow: 0 0 10px #0ff; z-index: 5; }
-        #combo { font-size: 70px; font-weight: bold; color: #0ff; margin: 0; transition: transform 0.1s; }
+        #ui { position: absolute; top: 20px; width: 100%; text-align: center; pointer-events: none; z-index: 5; }
+        #combo { font-size: 70px; font-weight: bold; color: #0ff; margin: 0; text-shadow: 0 0 20px #0ff; }
         #overlay { 
             position: absolute; inset: 0; background: radial-gradient(circle, #111 0%, #000 100%); 
-            display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10; transition: opacity 0.5s;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10;
         }
         .start-btn { 
             padding: 18px 50px; font-size: 22px; cursor: pointer; background: transparent; 
             color: #0ff; border: 2px solid #0ff; border-radius: 50px; transition: 0.3s;
-            box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
         }
-        .start-btn:hover { background: #0ff; color: #000; box-shadow: 0 0 30px #0ff; transform: scale(1.05); }
-        .hint { color: #666; margin-top: 20px; font-size: 14px; text-align: center; line-height: 1.6; }
+        .start-btn:hover { background: #0ff; color: #000; box-shadow: 0 0 30px #0ff; }
     </style>
 </head>
 <body>
 
     <div id="overlay">
-        <h1 style="letter-spacing: 10px; color: #0ff; text-shadow: 0 0 20px #0ff;">NEON BEAT</h1>
-        <p>自動音訊分析技術 | 支援自定義音樂</p>
+        <h1 style="color: #0ff; text-shadow: 0 0 20px #0ff;">NEON BEAT</h1>
         <button class="start-btn" id="start-btn">選取音樂並開始</button>
-        <div class="hint">
-            推薦使用 D F J K 鍵盤遊玩<br>
-            系統將自動根據音樂低音（Bass）強度生成譜面
-        </div>
     </div>
 
     <div id="ui">
         <p id="combo">0</p>
-        <div id="judgement" style="font-size: 28px; font-weight: bold; letter-spacing: 2px;">READY</div>
+        <div id="judgement" style="font-size: 28px; font-weight: bold; height: 30px;">READY</div>
     </div>
     <canvas id="gameCanvas"></canvas>
 
 <script>
-/** @type {HTMLCanvasElement} */
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const comboEl = document.getElementById('combo');
 const judgeEl = document.getElementById('judgement');
 
-// 遊戲配置
 const LANES = 4;
 const LANE_KEYS = ['d', 'f', 'j', 'k'];
 const COLORS = ['#FF0055', '#00FBFF', '#BCFF00', '#FF9500'];
-const BEAT_THRESHOLD = 210; // 低音閥值，越小越靈敏
-const BEAT_COOLDOWN = 180;  // 最小間隔
+const BEAT_THRESHOLD = 200; 
+const BEAT_COOLDOWN = 150;
 let laneWidth, judgeY;
 
-// 音訊變數
 let audioCtx, analyser, dataArray, source;
 let startTime = 0, isPlaying = false, combo = 0, lastBeatTime = 0;
 let notes = [], particles = [];
-
-class Particle {
-    constructor(x, y, color) {
-        this.x = x; this.y = y; this.color = color;
-        this.size = Math.random() * 4 + 2;
-        this.vx = (Math.random() - 0.5) * 15;
-        this.vy = (Math.random() - 0.5) * 15;
-        this.life = 1.0;
-    }
-    update() { this.x += this.vx; this.y += this.vy; this.life -= 0.03; }
-    draw() {
-        ctx.globalAlpha = this.life;
-        ctx.fillStyle = this.color;
-        ctx.shadowBlur = 10; ctx.shadowColor = this.color;
-        ctx.fillRect(this.x, this.y, this.size, this.size);
-    }
-}
 
 function initLayout() {
     canvas.width = window.innerWidth;
@@ -85,6 +58,7 @@ function initLayout() {
 }
 
 function spawnNote(now) {
+    if (!analyser) return;
     analyser.getByteFrequencyData(dataArray);
     let lowEnergy = 0;
     for(let i=0; i<4; i++) lowEnergy += dataArray[i];
@@ -92,9 +66,10 @@ function spawnNote(now) {
 
     if (avg > BEAT_THRESHOLD && (now - lastBeatTime) > BEAT_COOLDOWN) {
         notes.push({
-            time: now + 1200, // 1.2秒後到達
+            time: now + 1200, 
             lane: Math.floor(Math.random() * LANES),
-            hit: false
+            hit: false,
+            missed: false
         });
         lastBeatTime = now;
     }
@@ -103,72 +78,91 @@ function spawnNote(now) {
 function draw() {
     if(!isPlaying) return;
     const now = performance.now() - startTime;
-    spawnNote(now);
+    
+    try {
+        spawnNote(now);
 
-    ctx.fillStyle = 'rgba(5, 5, 5, 0.3)'; // 增加殘影效果
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = 'rgba(5, 5, 5, 0.4)'; 
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    const startX = canvas.width/2 - (laneWidth * 2);
+        const startX = canvas.width/2 - (laneWidth * 2);
 
-    // 繪製判定線
-    ctx.save();
-    ctx.shadowBlur = 20; ctx.shadowColor = '#0ff';
-    ctx.fillStyle = 'rgba(0, 255, 255, 0.3)';
-    ctx.fillRect(startX, judgeY, laneWidth * LANES, 4);
-    ctx.restore();
+        // 判定線
+        ctx.fillStyle = 'rgba(0, 255, 255, 0.3)';
+        ctx.fillRect(startX, judgeY, laneWidth * LANES, 4);
 
-    // 繪製音符
-    notes.forEach(note => {
-        if(note.hit) return;
-        const timeDiff = note.time - now;
-        const y = judgeY - (timeDiff * 0.8);
+        // 處理音符 (使用過濾確保不累積廢棄數據)
+        notes = notes.filter(note => !note.hit && (now - note.time < 500));
 
-        if(y > -50 && y < canvas.height + 50) {
-            const x = startX + note.lane * laneWidth + 10;
-            ctx.shadowBlur = 15; ctx.shadowColor = COLORS[note.lane];
-            ctx.fillStyle = COLORS[note.lane];
-            ctx.fillRect(x, y - 10, laneWidth - 20, 15);
-        }
+        notes.forEach(note => {
+            const timeDiff = note.time - now;
+            const y = judgeY - (timeDiff * 0.8);
 
-        if(timeDiff < -100) {
-            note.hit = true;
-            combo = 0; comboEl.innerText = combo;
-            judgeEl.innerText = "MISS"; judgeEl.style.color = "red";
-        }
-    });
+            if(y > -50 && y < canvas.height + 50) {
+                const x = startX + note.lane * laneWidth + 10;
+                ctx.fillStyle = COLORS[note.lane];
+                ctx.shadowBlur = 15; ctx.shadowColor = COLORS[note.lane];
+                ctx.fillRect(x, y - 10, laneWidth - 20, 15);
+                ctx.shadowBlur = 0;
+            }
 
-    particles = particles.filter(p => p.life > 0);
-    particles.forEach(p => { p.update(); p.draw(); });
+            // 漏接邏輯：超過判定線 150ms 算 Miss
+            if(timeDiff < -150 && !note.missed) {
+                note.missed = true;
+                combo = 0;
+                comboEl.innerText = combo;
+                judgeEl.innerText = "MISS";
+                judgeEl.style.color = "red";
+                // 300ms 後清除判定文字
+                setTimeout(() => { if(judgeEl.innerText === "MISS") judgeEl.innerText = ""; }, 300);
+            }
+        });
+
+        // 粒子更新
+        particles = particles.filter(p => p.life > 0);
+        particles.forEach(p => {
+            p.x += p.vx; p.y += p.vy; p.life -= 0.03;
+            ctx.globalAlpha = p.life;
+            ctx.fillStyle = p.color;
+            ctx.fillRect(p.x, p.y, 4, 4);
+        });
+        ctx.globalAlpha = 1;
+
+    } catch (e) {
+        console.error("Loop Error:", e);
+    }
 
     requestAnimationFrame(draw);
 }
 
-// 監聽鍵盤
 window.addEventListener('keydown', (e) => {
+    if(!isPlaying) return;
     const lane = LANE_KEYS.indexOf(e.key.toLowerCase());
-    if(lane === -1 || !isPlaying) return;
+    if(lane === -1) return;
 
     const now = performance.now() - startTime;
-    const hitNote = notes.find(n => !n.hit && n.lane === lane && Math.abs(n.time - now) < 150);
+    // 找出最接近判定時間的音符
+    const noteIdx = notes.findIndex(n => !n.hit && !n.missed && n.lane === lane && Math.abs(n.time - now) < 200);
 
-    if(hitNote) {
-        hitNote.hit = true;
-        const diff = Math.abs(hitNote.time - now);
-        if(diff < 60) {
-            judgeEl.innerText = "PERFECT"; judgeEl.style.color = "#0ff";
-        } else {
-            judgeEl.innerText = "GREAT"; judgeEl.style.color = "#bcff00";
-        }
-        combo++; comboEl.innerText = combo;
-        comboEl.style.transform = "scale(1.2)";
-        setTimeout(() => comboEl.style.transform = "scale(1)", 100);
+    if(noteIdx !== -1) {
+        const note = notes[noteIdx];
+        note.hit = true;
+        combo++;
+        comboEl.innerText = combo;
+        judgeEl.innerText = "PERFECT";
+        judgeEl.style.color = "#0ff";
         
+        // 噴發粒子
         const x = (canvas.width/2 - (laneWidth*2)) + (lane * laneWidth) + laneWidth/2;
-        for(let i=0; i<12; i++) particles.push(new Particle(x, judgeY, COLORS[lane]));
+        for(let i=0; i<10; i++) {
+            particles.push({
+                x: x, y: judgeY, color: COLORS[lane],
+                vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15, life: 1.0
+            });
+        }
     }
 });
 
-// 啟動邏輯 (檔案上傳)
 document.getElementById('start-btn').addEventListener('click', () => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -176,18 +170,16 @@ document.getElementById('start-btn').addEventListener('click', () => {
     input.onchange = (e) => {
         const file = e.target.files[0];
         if(!file) return;
-        const url = URL.createObjectURL(file);
         
-        document.getElementById('overlay').style.opacity = '0';
-        setTimeout(() => document.getElementById('overlay').style.display = 'none', 500);
-        
+        document.getElementById('overlay').style.display = 'none';
         initLayout();
+        
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         analyser = audioCtx.createAnalyser();
         analyser.fftSize = 256;
         dataArray = new Uint8Array(analyser.frequencyBinCount);
 
-        const audio = new Audio(url);
+        const audio = new Audio(URL.createObjectURL(file));
         source = audioCtx.createMediaElementSource(audio);
         source.connect(analyser);
         analyser.connect(audioCtx.destination);
