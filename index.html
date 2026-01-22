@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Neon Beat - Tablet Edition</title>
+    <title>Neon Beat - High Score Edition</title>
     <style>
-        /* 防止 iPad 長按選取文字與反黑 */
         * {
             -webkit-tap-highlight-color: transparent;
             -webkit-touch-callout: none;
@@ -13,61 +12,50 @@
             user-select: none;
             outline: none;
         }
-
-        body { 
-            margin: 0; background: #050505; color: white; 
-            overflow: hidden; font-family: 'Segoe UI', sans-serif;
-            touch-action: none; /* 禁用瀏覽器預設手勢 */
-        }
-        
+        body { margin: 0; background: #050505; color: white; overflow: hidden; font-family: 'Segoe UI', sans-serif; touch-action: none; }
         canvas { display: block; }
 
+        /* UI 樣式 */
         #ui { position: absolute; top: 20px; width: 100%; text-align: center; pointer-events: none; z-index: 5; }
-        #combo { font-size: 60px; font-weight: bold; color: #0ff; margin: 0; text-shadow: 0 0 20px #0ff; }
+        #score-display { font-size: 24px; color: #fff; margin: 0; }
+        #combo { font-size: 60px; font-weight: bold; color: #0ff; margin: 5px 0; text-shadow: 0 0 20px #0ff; }
 
-        /* 虛擬按鍵容器 */
-        #touch-controls {
-            position: absolute; bottom: 30px; width: 100%;
-            display: flex; justify-content: center; gap: 20px;
-            z-index: 20;
-        }
-
+        /* 虛擬按鍵 */
+        #touch-controls { position: absolute; bottom: 30px; width: 100%; display: flex; justify-content: center; gap: 20px; z-index: 20; }
         .touch-btn {
-            width: 70px; height: 70px;
-            border: 2px solid rgba(0, 255, 255, 0.5);
-            border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 24px; font-weight: bold; color: rgba(255, 255, 255, 0.8);
-            background: rgba(255, 255, 255, 0.05);
-            transition: transform 0.1s;
+            width: 70px; height: 70px; border: 2px solid rgba(0, 255, 255, 0.5); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold;
+            color: rgba(255, 255, 255, 0.8); background: rgba(255, 255, 255, 0.05); transition: 0.1s;
         }
+        .touch-btn.active { background: rgba(0, 255, 255, 0.3); transform: scale(0.9); border-color: #0ff; }
 
-        .touch-btn.active {
-            background: rgba(0, 255, 255, 0.3);
-            transform: scale(0.9);
-            border-color: #0ff;
-        }
-
-        #overlay { 
+        /* 遮罩畫面樣式 */
+        .overlay { 
             position: absolute; inset: 0; background: radial-gradient(circle, #111 0%, #000 100%); 
             display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 30;
         }
-
-        .start-btn { 
-            padding: 18px 50px; font-size: 22px; cursor: pointer; background: transparent; 
-            color: #0ff; border: 2px solid #0ff; border-radius: 50px;
-        }
+        .start-btn { padding: 18px 50px; font-size: 22px; cursor: pointer; background: transparent; color: #0ff; border: 2px solid #0ff; border-radius: 50px; margin-top: 20px; }
+        .best-score { color: #bcff00; font-size: 18px; margin-top: 10px; text-shadow: 0 0 10px rgba(188, 255, 0, 0.5); }
     </style>
 </head>
 <body>
 
-    <div id="overlay">
+    <div id="start-overlay" class="overlay">
         <h1 style="color: #0ff; text-shadow: 0 0 20px #0ff;">NEON BEAT</h1>
+        <div id="main-best-score" class="best-score">BEST: 0</div>
         <button class="start-btn" id="start-btn">START GAME</button>
-        <p style="color: #666; margin-top: 20px;">請確保 GitHub 上有 your_music.mp3</p>
+    </div>
+
+    <div id="end-overlay" class="overlay" style="display: none;">
+        <h2 style="color: #0ff;">MISSION COMPLETE</h2>
+        <div id="final-score" style="font-size: 48px; margin: 10px 0;">0</div>
+        <div id="new-record" style="color: #ff0055; font-weight: bold; display: none; margin-bottom: 10px;">NEW RECORD!</div>
+        <div id="end-best-score" class="best-score">BEST: 0</div>
+        <button class="start-btn" onclick="location.reload()">REPLAY</button>
     </div>
 
     <div id="ui">
+        <p id="score-display">SCORE: 0</p>
         <p id="combo">0</p>
         <div id="judgement" style="font-size: 24px; font-weight: bold; height: 30px;">READY</div>
     </div>
@@ -85,19 +73,21 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const comboEl = document.getElementById('combo');
+const scoreEl = document.getElementById('score-display');
 const judgeEl = document.getElementById('judgement');
 
 const LANES = 4;
 const LANE_KEYS = ['d', 'f', 'j', 'k'];
 const COLORS = ['#FF0055', '#00FBFF', '#BCFF00', '#FF9500'];
-const BEAT_THRESHOLD = 205; 
-const BEAT_COOLDOWN = 180;
 let laneWidth, judgeY;
 
 let audioCtx, analyser, dataArray, source, audio;
-let startTime = 0, isPlaying = false, combo = 0, lastBeatTime = 0;
-let notes = [], particles = [];
-let activeKeys = [false, false, false, false];
+let startTime = 0, isPlaying = false, combo = 0, score = 0, lastBeatTime = 0;
+let notes = [], particles = [], activeKeys = [false, false, false, false];
+
+// 分數紀錄初始化
+let bestScore = localStorage.getItem('neonBeatBestScore') || 0;
+document.getElementById('main-best-score').innerText = `BEST: ${bestScore}`;
 
 function initLayout() {
     canvas.width = window.innerWidth;
@@ -113,7 +103,7 @@ function spawnNote(now) {
     for(let i=0; i<4; i++) lowEnergy += dataArray[i];
     const avg = lowEnergy / 4;
 
-    if (avg > BEAT_THRESHOLD && (now - lastBeatTime) > BEAT_COOLDOWN) {
+    if (avg > 205 && (now - lastBeatTime) > 180) {
         notes.push({ time: now + 1200, lane: Math.floor(Math.random() * LANES), hit: false, missed: false });
         lastBeatTime = now;
     }
@@ -127,10 +117,22 @@ function handleInput(laneIndex, isDown) {
         btn.classList.add('active');
         const now = performance.now() - startTime;
         const noteIdx = notes.findIndex(n => !n.hit && !n.missed && n.lane === laneIndex && Math.abs(n.time - now) < 200);
+        
         if(noteIdx !== -1) {
+            const diff = Math.abs(notes[noteIdx].time - now);
             notes[noteIdx].hit = true;
-            combo++; comboEl.innerText = combo;
-            judgeEl.innerText = "PERFECT"; judgeEl.style.color = "#0ff";
+            combo++;
+            // 分數加成邏輯
+            if (diff < 70) {
+                score += 100;
+                judgeEl.innerText = "PERFECT";
+                judgeEl.style.color = "#0ff";
+            } else {
+                score += 50;
+                judgeEl.innerText = "GREAT";
+                judgeEl.style.color = "#bcff00";
+            }
+            updateUI();
             const x = (canvas.width/2 - (laneWidth*2)) + (laneIndex * laneWidth) + laneWidth/2;
             for(let i=0; i<8; i++) particles.push({ x, y: judgeY, color: COLORS[laneIndex], vx: (Math.random()-0.5)*12, vy: (Math.random()-0.5)*12, life: 1.0 });
         }
@@ -139,10 +141,29 @@ function handleInput(laneIndex, isDown) {
     }
 }
 
+function updateUI() {
+    comboEl.innerText = combo;
+    scoreEl.innerText = `SCORE: ${score}`;
+}
+
+function endGame() {
+    isPlaying = false;
+    document.getElementById('end-overlay').style.display = 'flex';
+    document.getElementById('final-score').innerText = score;
+    
+    if (score > bestScore) {
+        localStorage.setItem('neonBeatBestScore', score);
+        document.getElementById('new-record').style.display = 'block';
+        bestScore = score;
+    }
+    document.getElementById('end-best-score').innerText = `BEST: ${bestScore}`;
+}
+
 function draw() {
     if(!isPlaying) return;
     const now = performance.now() - startTime;
     spawnNote(now);
+    
     ctx.fillStyle = 'rgba(5, 5, 5, 0.4)'; 
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -166,12 +187,10 @@ function draw() {
         if(y > -50 && y < canvas.height + 50) {
             const x = startX + note.lane * laneWidth + 10;
             ctx.fillStyle = COLORS[note.lane];
-            ctx.shadowBlur = 10; ctx.shadowColor = COLORS[note.lane];
             ctx.fillRect(x, y - 10, laneWidth - 20, 15);
-            ctx.shadowBlur = 0;
         }
         if(timeDiff < -150 && !note.missed) {
-            note.missed = true; combo = 0; comboEl.innerText = combo;
+            note.missed = true; combo = 0; updateUI();
             judgeEl.innerText = "MISS"; judgeEl.style.color = "red";
         }
     });
@@ -183,10 +202,11 @@ function draw() {
         ctx.fillRect(p.x, p.y, 3, 3);
     });
     ctx.globalAlpha = 1;
+
     requestAnimationFrame(draw);
 }
 
-// 鍵盤監聽
+// 事件綁定
 window.addEventListener('keydown', (e) => {
     const lane = LANE_KEYS.indexOf(e.key.toLowerCase());
     if(lane !== -1 && !activeKeys[lane]) handleInput(lane, true);
@@ -196,7 +216,6 @@ window.addEventListener('keyup', (e) => {
     if(lane !== -1) handleInput(lane, false);
 });
 
-// 平板觸控監聽
 LANE_KEYS.forEach((_, i) => {
     const btn = document.getElementById(`btn-${i}`);
     btn.addEventListener('touchstart', (e) => { e.preventDefault(); handleInput(i, true); }, {passive: false});
@@ -204,7 +223,6 @@ LANE_KEYS.forEach((_, i) => {
 });
 
 document.getElementById('start-btn').addEventListener('click', async () => {
-    document.getElementById('start-btn').innerText = "Loading...";
     initLayout();
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     analyser = audioCtx.createAnalyser();
@@ -218,10 +236,13 @@ document.getElementById('start-btn').addEventListener('click', async () => {
         source.connect(analyser);
         analyser.connect(audioCtx.destination);
         await audio.play();
-        document.getElementById('overlay').style.display = 'none';
+        document.getElementById('start-overlay').style.display = 'none';
         startTime = performance.now();
         isPlaying = true;
         draw();
+        
+        // 音樂結束自動結算
+        audio.onended = endGame;
     } catch (err) { alert("找不到音樂檔案 your_music.mp3"); }
 });
 
