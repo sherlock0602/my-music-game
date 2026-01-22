@@ -3,58 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Neon Beat - Difficulty & Offset Edition</title>
+    <title>Neon Beat - Precision Sync Edition</title>
     <style>
+        /* 基礎防錯設定 */
         * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; outline: none; }
         body { margin: 0; background: #050505; color: white; overflow: hidden; font-family: 'Segoe UI', sans-serif; touch-action: none; }
         canvas { display: block; }
 
-        /* UI */
+        /* UI 層 */
         #ui { position: absolute; top: 20px; width: 100%; text-align: center; pointer-events: none; z-index: 5; }
-        #score-display { font-size: 20px; color: #aaa; margin: 0; }
         #combo { font-size: 60px; font-weight: bold; color: #0ff; margin: 5px 0; text-shadow: 0 0 20px #0ff; }
 
         /* 虛擬按鍵 */
         #touch-controls { position: absolute; bottom: 30px; width: 100%; display: flex; justify-content: center; gap: 20px; z-index: 20; }
         .touch-btn {
-            width: 70px; height: 70px; border: 2px solid rgba(0, 255, 255, 0.5); border-radius: 50%;
+            width: 75px; height: 75px; border: 2px solid rgba(0, 255, 255, 0.4); border-radius: 50%;
             display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold;
-            color: rgba(255, 255, 255, 0.8); background: rgba(255, 255, 255, 0.05); transition: 0.1s;
+            color: rgba(255, 255, 255, 0.7); background: rgba(255, 255, 255, 0.05); transition: 0.1s;
         }
-        .touch-btn.active { background: rgba(0, 255, 255, 0.3); transform: scale(0.9); border-color: #0ff; }
+        .touch-btn.active { background: rgba(0, 255, 255, 0.4); transform: scale(0.9); border-color: #0ff; }
 
-        /* 覆蓋畫面 */
-        .overlay { 
-            position: absolute; inset: 0; background: radial-gradient(circle, #111 0%, #000 100%); 
-            display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 30;
-        }
-        .menu-group { display: flex; gap: 10px; margin-top: 20px; }
-        .diff-btn { 
-            padding: 12px 25px; font-size: 16px; cursor: pointer; background: transparent; 
-            color: #0ff; border: 1px solid #0ff; border-radius: 30px; transition: 0.3s;
-        }
-        .diff-btn:hover { background: rgba(0, 255, 255, 0.2); }
-        .best-score { color: #bcff00; font-size: 18px; margin-top: 10px; }
+        /* 選單與結算 */
+        .overlay { position: absolute; inset: 0; background: radial-gradient(circle, #111 0%, #000 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 30; }
+        .diff-btn { padding: 15px 40px; font-size: 18px; cursor: pointer; background: transparent; color: #0ff; border: 1px solid #0ff; border-radius: 30px; margin: 10px; }
     </style>
 </head>
 <body>
 
     <div id="start-overlay" class="overlay">
-        <h1 style="color: #0ff; text-shadow: 0 0 20px #0ff; letter-spacing: 5px;">NEON BEAT</h1>
-        <div id="main-best-score" class="best-score">BEST: 0</div>
-        <p style="margin-top: 30px; color: #888;">選擇難度開始遊戲</p>
-        <div class="menu-group">
-            <button class="diff-btn" onclick="startGame('easy')">EASY</button>
-            <button class="diff-btn" onclick="startGame('normal')">NORMAL</button>
-            <button class="diff-btn" onclick="startGame('hard')">HARD</button>
+        <h1 style="color: #0ff; text-shadow: 0 0 20px #0ff;">NEON BEAT</h1>
+        <p style="color: #888;">精準節拍同步版</p>
+        <div style="display: flex; gap: 10px;">
+            <button class="diff-btn" onclick="initGame('easy')">EASY</button>
+            <button class="diff-btn" onclick="initGame('normal')">NORMAL</button>
+            <button class="diff-btn" onclick="initGame('hard')">HARD</button>
         </div>
-    </div>
-
-    <div id="end-overlay" class="overlay" style="display: none;">
-        <h2 style="color: #0ff;">FINISH</h2>
-        <div id="final-score" style="font-size: 48px; margin: 10px 0;">0</div>
-        <div id="end-best-score" class="best-score">BEST: 0</div>
-        <button class="diff-btn" style="margin-top: 30px; padding: 15px 40px;" onclick="location.reload()">RETRY</button>
     </div>
 
     <div id="ui">
@@ -79,184 +62,140 @@ const comboEl = document.getElementById('combo');
 const scoreEl = document.getElementById('score-display');
 const judgeEl = document.getElementById('judgement');
 
-// --- 調節參數 ---
-let GLOBAL_OFFSET = -150; // 如果節拍太慢到判定線，將此值調更負(如-200)；太快到則調正
-let NOTE_SPEED = 0.5;    // 下落速度
-let BEAT_THRESHOLD = 210; // 靈敏度 (越低越容易生出方塊)
-let BEAT_COOLDOWN = 250;  // 生成密度
+// --- 核心參數 ---
+const LEAD_TIME = 1200; // 方塊下落的總時長 (毫秒)
+let NOTE_SPEED = 0.6;   // 速度
+let BEAT_THRESHOLD = 210; 
+let BEAT_COOLDOWN = 200;
 
 const LANES = 4;
 const LANE_KEYS = ['d', 'f', 'j', 'k'];
 const COLORS = ['#FF0055', '#00FBFF', '#BCFF00', '#FF9500'];
-let laneWidth, judgeY;
 
-let audioCtx, analyser, dataArray, source, audio;
+let audioCtx, analyser, dataArray, delayNode, source, audio;
 let startTime = 0, isPlaying = false, combo = 0, score = 0, lastBeatTime = 0;
-let notes = [], particles = [], activeKeys = [false, false, false, false];
+let notes = [], activeKeys = [false, false, false, false];
 
-let bestScore = localStorage.getItem('neonBeatBestScore') || 0;
-document.getElementById('main-best-score').innerText = `BEST: ${bestScore}`;
-
-function initLayout() {
+function initGame(mode) {
+    if (mode === 'easy') { NOTE_SPEED = 0.5; BEAT_THRESHOLD = 220; BEAT_COOLDOWN = 400; }
+    else if (mode === 'hard') { NOTE_SPEED = 0.9; BEAT_THRESHOLD = 200; BEAT_COOLDOWN = 150; }
+    
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
     laneWidth = Math.min(100, canvas.width / 5);
-    judgeY = canvas.height * 0.75; 
+    judgeY = canvas.height * 0.75;
+
+    setupAudio();
 }
 
-function startGame(mode) {
-    // 難度分級設定
-    if (mode === 'easy') {
-        NOTE_SPEED = 0.4;
-        BEAT_THRESHOLD = 225; 
-        BEAT_COOLDOWN = 400;
-    } else if (mode === 'normal') {
-        NOTE_SPEED = 0.6;
-        BEAT_THRESHOLD = 210;
-        BEAT_COOLDOWN = 250;
-    } else {
-        NOTE_SPEED = 0.9;
-        BEAT_THRESHOLD = 195;
-        BEAT_COOLDOWN = 150;
-    }
+async function setupAudio() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 256;
+    dataArray = new Uint8Array(analyser.frequencyBinCount);
 
-    initLayout();
-    initAudio();
+    // 關鍵：使用 DelayNode 將聲音延後播放
+    delayNode = audioCtx.createDelay(2.0);
+    delayNode.delayTime.value = LEAD_TIME / 1000; // 將聲音延遲 LEAD_TIME 秒
+
+    audio = new Audio('your_music.mp3');
+    audio.crossOrigin = "anonymous";
+    
+    source = audioCtx.createMediaElementSource(audio);
+    
+    // 音訊路線：Source -> Analyser (即時偵測) -> DelayNode (延遲) -> Destination (播放)
+    source.connect(analyser);
+    analyser.connect(delayNode);
+    delayNode.connect(audioCtx.destination);
+
+    await audio.play();
+    document.getElementById('start-overlay').style.display = 'none';
+    startTime = performance.now();
+    isPlaying = true;
+    requestAnimationFrame(gameLoop);
 }
 
-async function initAudio() {
-    try {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        analyser = audioCtx.createAnalyser();
-        analyser.fftSize = 256;
-        dataArray = new Uint8Array(analyser.frequencyBinCount);
-
-        audio = new Audio('your_music.mp3'); 
-        audio.crossOrigin = "anonymous";
-        source = audioCtx.createMediaElementSource(audio);
-        source.connect(analyser);
-        analyser.connect(audioCtx.destination);
-
-        await audio.play();
-        document.getElementById('start-overlay').style.display = 'none';
-        startTime = performance.now();
-        isPlaying = true;
-        draw();
-        audio.onended = endGame;
-    } catch (err) {
-        alert("請確認檔案 your_music.mp3 已上傳");
-    }
-}
-
-function spawnNote(now) {
-    if (!analyser) return;
-    analyser.getByteFrequencyData(dataArray);
-    let lowEnergy = 0;
-    for(let i=0; i<4; i++) lowEnergy += dataArray[i];
-    const avg = lowEnergy / 4;
-
-    if (avg > BEAT_THRESHOLD && (now - lastBeatTime) > BEAT_COOLDOWN) {
-        // 加入 GLOBAL_OFFSET 進行校準
-        notes.push({ time: now + 1200 + GLOBAL_OFFSET, lane: Math.floor(Math.random() * LANES), hit: false, missed: false });
-        lastBeatTime = now;
-    }
-}
-
-function handleInput(laneIndex, isDown) {
-    if (!isPlaying) return;
-    activeKeys[laneIndex] = isDown;
-    const btn = document.getElementById(`btn-${laneIndex}`);
-    if (isDown) {
-        btn.classList.add('active');
-        const now = performance.now() - startTime;
-        const noteIdx = notes.findIndex(n => !n.hit && !n.missed && n.lane === laneIndex && Math.abs(n.time - now) < 150);
-        
-        if(noteIdx !== -1) {
-            notes[noteIdx].hit = true;
-            combo++; score += 100;
-            updateUI();
-            judgeEl.innerText = "PERFECT"; judgeEl.style.color = "#0ff";
-            const x = (canvas.width/2 - (laneWidth*2)) + (laneIndex * laneWidth) + laneWidth/2;
-            for(let i=0; i<6; i++) particles.push({ x, y: judgeY, color: COLORS[laneIndex], vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10, life: 1.0 });
-        }
-    } else {
-        btn.classList.remove('active');
-    }
-}
-
-function updateUI() {
-    comboEl.innerText = combo;
-    scoreEl.innerText = `SCORE: ${score}`;
-}
-
-function endGame() {
-    isPlaying = false;
-    document.getElementById('end-overlay').style.display = 'flex';
-    document.getElementById('final-score').innerText = score;
-    if (score > bestScore) {
-        localStorage.setItem('neonBeatBestScore', score);
-        bestScore = score;
-    }
-    document.getElementById('end-best-score').innerText = `BEST: ${bestScore}`;
-}
-
-function draw() {
+function gameLoop() {
     if(!isPlaying) return;
     const now = performance.now() - startTime;
-    spawnNote(now);
-    
-    ctx.fillStyle = 'rgba(5, 5, 5, 0.5)'; 
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+    // 1. 偵測當前音樂頻譜 (這是音樂尚未被延遲的原始訊號)
+    analyser.getByteFrequencyData(dataArray);
+    let lowEnergy = 0;
+    for(let i=0; i<5; i++) lowEnergy += dataArray[i];
+    const avg = lowEnergy / 5;
+
+    // 2. 如果偵測到重音，生成一個在 LEAD_TIME 後才「響起」的音符
+    if (avg > BEAT_THRESHOLD && (now - lastBeatTime) > BEAT_COOLDOWN) {
+        notes.push({
+            targetTime: now + LEAD_TIME, // 音樂在 LEAD_TIME 後才會播到這裡
+            lane: Math.floor(Math.random() * LANES),
+            hit: false
+        });
+        lastBeatTime = now;
+    }
+
+    // 3. 繪製畫面
+    ctx.fillStyle = '#050505';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     const startX = canvas.width/2 - (laneWidth * 2);
 
     LANE_KEYS.forEach((_, i) => {
         const x = startX + i * laneWidth;
-        ctx.strokeStyle = activeKeys[i] ? COLORS[i] : 'rgba(0, 255, 255, 0.15)';
-        ctx.strokeRect(x + 5, judgeY, laneWidth - 10, 2);
+        ctx.strokeStyle = activeKeys[i] ? COLORS[i] : 'rgba(0, 255, 255, 0.1)';
+        ctx.strokeRect(x+5, judgeY, laneWidth-10, 2);
     });
 
-    notes = notes.filter(note => !note.hit && (now - note.time < 300));
-    notes.forEach(note => {
-        const timeDiff = note.time - now;
+    // 4. 更新與繪製音符
+    notes = notes.filter(n => !n.hit && (now - n.targetTime < 200));
+    notes.forEach(n => {
+        const timeDiff = n.targetTime - now;
         const y = judgeY - (timeDiff * NOTE_SPEED);
-        if(y > -50 && y < canvas.height + 50) {
-            const x = startX + note.lane * laneWidth + 10;
-            ctx.fillStyle = COLORS[note.lane];
-            ctx.fillRect(x, y - 10, laneWidth - 20, 15);
+        
+        if (y > -20 && y < canvas.height) {
+            ctx.fillStyle = COLORS[n.lane];
+            ctx.fillRect(startX + n.lane * laneWidth + 10, y - 10, laneWidth - 20, 15);
         }
-        if(timeDiff < -150 && !note.missed) {
-            note.missed = true; combo = 0; updateUI();
+
+        if (timeDiff < -150) { 
+            combo = 0; comboEl.innerText = 0; 
             judgeEl.innerText = "MISS"; judgeEl.style.color = "red";
         }
     });
 
-    particles = particles.filter(p => p.life > 0);
-    particles.forEach(p => {
-        p.x += p.vx; p.y += p.vy; p.life -= 0.05;
-        ctx.globalAlpha = p.life; ctx.fillStyle = p.color;
-        ctx.fillRect(p.x, p.y, 3, 3);
-    });
-    ctx.globalAlpha = 1;
-
-    requestAnimationFrame(draw);
+    requestAnimationFrame(gameLoop);
 }
 
-// 綁定事件
+function handleInput(index, isDown) {
+    activeKeys[index] = isDown;
+    document.getElementById(`btn-${index}`).classList.toggle('active', isDown);
+    if (isDown && isPlaying) {
+        const now = performance.now() - startTime;
+        const note = notes.find(n => !n.hit && n.lane === index && Math.abs(n.targetTime - now) < 150);
+        if (note) {
+            note.hit = true;
+            combo++; score += 100;
+            comboEl.innerText = combo;
+            scoreEl.innerText = `SCORE: ${score}`;
+            judgeEl.innerText = "PERFECT"; judgeEl.style.color = "#0ff";
+        }
+    }
+}
+
+// 監聽
 LANE_KEYS.forEach((_, i) => {
     const btn = document.getElementById(`btn-${i}`);
-    btn.addEventListener('touchstart', (e) => { e.preventDefault(); handleInput(i, true); }, {passive: false});
-    btn.addEventListener('touchend', (e) => { e.preventDefault(); handleInput(i, false); }, {passive: false});
+    btn.addEventListener('touchstart', (e) => { e.preventDefault(); handleInput(i, true); });
+    btn.addEventListener('touchend', (e) => { e.preventDefault(); handleInput(i, false); });
 });
 window.addEventListener('keydown', (e) => {
-    const lane = LANE_KEYS.indexOf(e.key.toLowerCase());
-    if(lane !== -1 && !activeKeys[lane]) handleInput(lane, true);
+    const i = LANE_KEYS.indexOf(e.key.toLowerCase());
+    if(i !== -1) handleInput(i, true);
 });
 window.addEventListener('keyup', (e) => {
-    const lane = LANE_KEYS.indexOf(e.key.toLowerCase());
-    if(lane !== -1) handleInput(lane, false);
+    const i = LANE_KEYS.indexOf(e.key.toLowerCase());
+    if(i !== -1) handleInput(i, false);
 });
-window.addEventListener('resize', initLayout);
 </script>
 </body>
 </html>
