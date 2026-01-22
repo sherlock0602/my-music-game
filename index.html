@@ -3,222 +3,254 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Neon Beat - High Contrast</title>
+    <title>Neon Beat - Cyber Core</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
 
-        /* --- 基礎設定 --- */
+        /* --- 系統重置 --- */
         * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; user-select: none; touch-action: none; box-sizing: border-box; outline: none; }
-        body { margin: 0; background: #000; color: white; overflow: hidden; font-family: 'Orbitron', sans-serif; width: 100vw; height: 100vh; position: fixed; }
+        body { 
+            margin: 0; background: #020205; color: #0ff; overflow: hidden; 
+            font-family: 'Share Tech Mono', monospace; 
+            width: 100vw; height: 100vh;
+            display: flex; justify-content: center; /* 強制置中 */
+        }
 
-        /* --- 背景 (純黑底+粒子) --- */
-        #bg { position: absolute; inset: 0; z-index: 0; background: #000; }
+        /* --- 遊戲主容器 (限制最大寬度，解決手指按不到的問題) --- */
+        #game-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px; /* 關鍵：限制最大寬度，平板也好按 */
+            height: 100%;
+            background: radial-gradient(circle at 50% 30%, #0d1117 0%, #000 90%);
+            overflow: hidden;
+            box-shadow: 0 0 50px rgba(0, 255, 255, 0.1);
+            border-left: 1px solid #111;
+            border-right: 1px solid #111;
+        }
+
+        /* --- 背景裝飾 (科技網格) --- */
+        #grid-bg {
+            position: absolute; inset: 0; z-index: 0;
+            background-image: 
+                linear-gradient(transparent 95%, rgba(0, 255, 255, 0.2) 95%),
+                linear-gradient(90deg, transparent 95%, rgba(0, 255, 255, 0.2) 95%);
+            background-size: 40px 40px;
+            transform: perspective(600px) rotateX(60deg);
+            transform-origin: center 80%;
+            animation: grid-scroll 2s linear infinite;
+            opacity: 0.3;
+        }
+        @keyframes grid-scroll { from { background-position: 0 0; } to { background-position: 0 40px; } }
+
+        /* --- 掃描線特效 (CRT效果) --- */
+        .scanline {
+            position: absolute; inset: 0; pointer-events: none; z-index: 90;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.1));
+            background-size: 100% 4px;
+        }
+
+        /* --- HUD 介面 --- */
+        #hud-layer { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            pointer-events: none; z-index: 10; padding: 20px;
+        }
         
-        /* --- UI 層 --- */
-        #ui-layer { 
-            position: absolute; top: 30px; width: 100%; pointer-events: none; z-index: 10; 
-            display: flex; flex-direction: column; align-items: center;
+        /* 頂部數據列 */
+        .hud-top { display: flex; justify-content: space-between; align-items: flex-start; }
+        .hud-box { 
+            border: 1px solid rgba(0, 255, 255, 0.3); 
+            background: rgba(0, 20, 30, 0.8);
+            padding: 5px 10px; clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
         }
+        
+        #timer-display { font-size: 24px; color: #fff; text-shadow: 0 0 10px #0ff; }
+        #timer-label { font-size: 10px; color: #0ff; letter-spacing: 2px; }
+        
+        #score-display { text-align: right; }
+        #score-num { font-size: 20px; color: #fff; }
+        #score-label { font-size: 10px; color: #0ff; }
 
-        /* 倒數計時器 (新功能) */
-        #timer-box {
-            font-size: 40px; font-weight: 900; color: #fff;
-            text-shadow: 0 0 20px #fff, 0 0 40px #0ff;
-            margin-bottom: 10px; letter-spacing: 2px;
+        /* 中間 Combo */
+        #center-hud {
+            position: absolute; top: 25%; width: 100%; left: 0; text-align: center;
         }
-        #timer-label { font-size: 12px; color: #888; letter-spacing: 4px; margin-bottom: 5px; }
-
         #combo-num { 
-            font-size: 70px; font-weight: 900; color: #fff; 
-            text-shadow: 0 0 30px rgba(255,255,255,0.8); margin: 0; opacity: 0.8;
-            transition: transform 0.1s;
+            font-size: 80px; font-weight: bold; margin: 0; color: rgba(255,255,255,0.9);
+            text-shadow: 4px 4px 0px rgba(0, 255, 255, 0.2); 
+            letter-spacing: -5px; font-style: italic;
         }
-        #score-text { font-size: 14px; color: #666; letter-spacing: 2px; margin-top: 5px; }
+        #combo-label { font-size: 14px; letter-spacing: 5px; color: #0ff; opacity: 0.7; }
         
         #judgement { 
-            font-size: 32px; font-weight: 900; height: 40px; margin-top: 15px; 
-            opacity: 0; transition: transform 0.1s; letter-spacing: 5px;
-            text-shadow: 0 0 20px currentColor;
+            margin-top: 10px; font-size: 32px; font-weight: bold; letter-spacing: 2px;
+            text-shadow: 0 0 20px currentColor; opacity: 0; transition: transform 0.05s;
         }
 
-        /* --- 載入畫面 --- */
-        #loader-layer { 
+        /* --- 載入層 --- */
+        #loader {
             position: absolute; inset: 0; z-index: 100; background: #000;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            transition: opacity 0.5s;
         }
-        #status-text { color: #0ff; font-size: 16px; margin-bottom: 30px; animation: pulse 1.0s infinite alternate; }
-        @keyframes pulse { from { opacity: 0.6; text-shadow: 0 0 10px #0ff; } to { opacity: 1; text-shadow: 0 0 30px #0ff; } }
-        #start-btn {
-            padding: 20px 80px; font-size: 24px; font-weight: 900; color: #000; background: #0ff;
-            border: none; border-radius: 4px; cursor: pointer; font-family: 'Orbitron';
-            box-shadow: 0 0 50px #0ff; display: none; text-transform: uppercase;
-        }
+        .loading-bar { width: 200px; height: 4px; background: #333; margin-top: 20px; position: relative; overflow: hidden; }
+        .loading-fill { position: absolute; left: 0; top: 0; height: 100%; width: 100%; background: #0ff; animation: load-anim 1s infinite translateX(-100%); }
+        @keyframes load-anim { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
 
-        /* --- 隱形觸控區 (按鈕) --- */
-        /* 我們將在 Canvas 上畫出漂亮的按鈕圈圈，這裡只負責接收觸控 */
-        #controls { 
-            position: absolute; 
-            bottom: 15%; /* 關鍵：上移，避免按不到 */
-            left: 50%; transform: translateX(-50%);
-            display: flex; 
-            z-index: 20;
-            /* gap 和 width 會由 JS 動態計算以完美對齊 */
+        #start-btn {
+            margin-top: 30px; padding: 15px 40px; 
+            background: transparent; border: 2px solid #0ff; color: #0ff;
+            font-family: 'Share Tech Mono'; font-size: 20px; cursor: pointer;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+            transition: 0.2s; display: none;
         }
-        .key-btn {
-            /* 高度與外觀由 JS 設定，這裡只設基礎交互 */
-            background: rgba(255, 255, 255, 0.0); /* 完全透明，只靠 Canvas 繪圖 */
-            display: flex; align-items: center; justify-content: center;
-            font-size: 24px; font-weight: bold; color: rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
+        #start-btn:hover { background: #0ff; color: #000; box-shadow: 0 0 40px #0ff; }
+
+        /* --- 觸控區 (透明，覆蓋在下方) --- */
+        #controls-layer {
+            position: absolute; bottom: 12%; left: 0; width: 100%; height: 120px;
+            display: flex; justify-content: center; align-items: flex-end;
+            z-index: 20; gap: 8px; /* 按鈕間距 */
+        }
+        .touch-pad {
+            flex: 1; max-width: 90px; height: 100%;
+            /* 邊框除錯用，正式版設為透明但保留點擊反饋 */
+            background: linear-gradient(to top, rgba(0, 255, 255, 0.05), transparent);
+            border-bottom: 2px solid rgba(0, 255, 255, 0.1);
+            border-radius: 4px;
             transition: 0.05s;
-            /* border: 1px dashed #333;  除錯用，平時隱藏 */
+            position: relative;
         }
-        .key-btn.active { background: rgba(255, 255, 255, 0.1); }
+        /* 按下時的效果 */
+        .touch-pad.active {
+            background: linear-gradient(to top, rgba(0, 255, 255, 0.3), transparent);
+            border-bottom: 4px solid #0ff;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.4);
+        }
+        /* 按鍵標示 */
+        .touch-pad::after {
+            content: attr(data-key);
+            position: absolute; bottom: 10px; width: 100%; text-align: center;
+            color: rgba(0, 255, 255, 0.5); font-size: 14px;
+        }
 
         canvas { display: block; position: absolute; inset: 0; z-index: 5; }
     </style>
 </head>
 <body>
 
-    <div id="bg"></div>
+<div id="game-container">
+    <div id="grid-bg"></div>
+    <div class="scanline"></div>
 
-    <div id="loader-layer">
-        <h1 style="font-size: 60px; margin-bottom: 10px; text-shadow: 0 0 40px #0ff;">NEON</h1>
-        <div id="status-text">INITIALIZING SYSTEM...</div>
-        <button id="start-btn" onclick="startGame()">START GAME</button>
+    <div id="loader">
+        <h1 style="font-size: 40px; margin: 0; letter-spacing: 5px; text-shadow: 0 0 20px #0ff;">CYBER BEAT</h1>
+        <div style="font-size: 12px; color: #666; margin-top: 5px;">SYSTEM INITIALIZATION</div>
+        <div class="loading-bar"><div class="loading-fill"></div></div>
+        <div id="status-text" style="margin-top: 10px; font-size: 12px; color: #0ff;">READING DATA...</div>
+        <button id="start-btn" onclick="startGame()">INITIATE LINK</button>
     </div>
 
-    <div id="ui-layer">
-        <div id="timer-label">TIME REMAINING</div>
-        <div id="timer-box">--:--</div>
-        
-        <div style="height: 20px;"></div> <p id="combo-num">0</p>
-        <p id="score-text">SCORE</p>
-        <div id="judgement">READY</div>
+    <div id="hud-layer">
+        <div class="hud-top">
+            <div class="hud-box">
+                <div id="timer-label">T-MINUS</div>
+                <div id="timer-display">00:00</div>
+            </div>
+            <div class="hud-box">
+                <div id="score-label">DATA SYNC</div>
+                <div id="score-num">000000</div>
+            </div>
+        </div>
+
+        <div id="center-hud">
+            <div id="combo-num">0</div>
+            <div id="combo-label">COMBO</div>
+            <div id="judgement">READY</div>
+        </div>
     </div>
 
     <canvas id="gameCanvas"></canvas>
 
-    <div id="controls">
-        <div class="key-btn" id="btn-0"></div>
-        <div class="key-btn" id="btn-1"></div>
-        <div class="key-btn" id="btn-2"></div>
-        <div class="key-btn" id="btn-3"></div>
+    <div id="controls-layer">
+        <div class="touch-pad" id="btn-0" data-key="D"></div>
+        <div class="touch-pad" id="btn-1" data-key="F"></div>
+        <div class="touch-pad" id="btn-2" data-key="J"></div>
+        <div class="touch-pad" id="btn-3" data-key="K"></div>
     </div>
+</div>
 
 <script>
-// --- 用戶需求配置 ---
+// --- 設定區 ---
 const MUSIC_URL = 'music.mp3';
-const LEAD_TIME = 1300; // 音符飛行時間 (毫秒)
-const OFFSET = 0;       // 判定延遲修正
+const LEAD_TIME = 1200; // 音符飛行時間 ms
+const OFFSET = 0;
 
-// 顏色需求：黃色、淡藍色、青綠色、紫色
-// 對應 Hex: Yellow, Light Blue, Spring Green, Purple
-const COLORS = ['#FFD700', '#00BFFF', '#00FF7F', '#D000FF']; 
+// 科技感配色 (黃, 藍, 綠, 紫)
+const LANE_COLORS = ['#FFD700', '#00BFFF', '#00FF7F', '#D000FF'];
 const LANE_KEYS = ['d', 'f', 'j', 'k'];
 
-// --- 3D 透視參數 ---
-let TOP_WIDTH_RATIO = 0.05;  // 遠處軌道寬度 (窄)
-let BOTTOM_WIDTH_RATIO = 0.9; // 近處軌道寬度 (寬)
-let HIT_LINE_Y_POS = 0.82;   // 判定線在畫面的 Y 軸比例 (0.0~1.0)
-let TRACK_START_Y = 0.3;     // 軌道消失點 Y 軸比例
-
 // --- 系統變數 ---
+const container = document.getElementById('game-container');
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const comboEl = document.getElementById('combo-num');
+const scoreEl = document.getElementById('score-num');
 const judgeEl = document.getElementById('judgement');
-const timerBox = document.getElementById('timer-box');
+const timerEl = document.getElementById('timer-display');
 const statusText = document.getElementById('status-text');
 const startBtn = document.getElementById('start-btn');
-const loaderLayer = document.getElementById('loader-layer');
+const loader = document.getElementById('loader');
 
 let audioCtx, audioBuffer, audioSource;
 let isPlaying = false, startTime = 0;
 let generatedNotes = [], activeNotes = [];
 let combo = 0, score = 0;
 let activeKeys = [false, false, false, false];
-let particles = []; 
+let particles = [];
 
-// 用來儲存每一軌道在判定線位置的精確座標，用於對齊按鈕
-let laneCoords = []; 
+// 軌道幾何參數
+let trackTopW, trackBottomW, trackH, trackY_Start, trackY_End;
 
 // --- 1. 初始化 ---
 window.onload = async function() {
     resize();
     window.addEventListener('resize', resize);
     
-    // 初始化背景星空
-    initStars();
-
     try {
-        statusText.innerText = "DOWNLOADING MUSIC...";
         const response = await fetch(MUSIC_URL);
-        if (!response.ok) throw new Error("找不到 music.mp3");
-        
+        if (!response.ok) throw new Error("File not found");
         const arrayBuffer = await response.arrayBuffer();
-        statusText.innerText = "ANALYZING BEATS...";
         
+        statusText.innerText = "PROCESSING AUDIO WAVEFORM...";
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         audioCtx.decodeAudioData(arrayBuffer, (buffer) => {
             audioBuffer = buffer;
             analyzeBeats(buffer);
-        }, () => { throw new Error("Decode Error"); });
-
+        }, () => { throw new Error("Decode Failed"); });
     } catch (err) {
-        statusText.style.color = "#ff3333";
-        statusText.innerText = "ERROR: music.mp3 NOT FOUND";
+        statusText.style.color = "red";
+        statusText.innerText = "ERROR: music.mp3 MISSING";
     }
 };
 
-// --- 2. 畫面適配與按鈕對齊 (核心修復) ---
+// --- 2. 佈局計算 (關鍵：確保按鈕對齊) ---
 function resize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    
-    // 計算判定線位置的實際 Y 像素
-    const hitY = canvas.height * HIT_LINE_Y_POS;
-    
-    // 重新計算四個軌道的中心點與寬度
-    laneCoords = [];
-    for(let i=0; i<4; i++) {
-        const p = getPerspective(i, 1.0); // 取得判定線位置的透視數據
-        laneCoords.push(p);
-    }
+    // 讓 Canvas 大小等於容器大小 (容器已經限制了 max-width 500px)
+    const rect = container.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = rect.height;
 
-    // --- 關鍵修復：將 HTML 按鈕強制對齊 Canvas 軌道 ---
-    const controls = document.getElementById('controls');
-    const firstLane = laneCoords[0];
-    const lastLane = laneCoords[3];
+    // 設定軌道參數
+    trackY_Start = canvas.height * 0.2; // 消失點
+    trackY_End = canvas.height * 0.85;  // 判定線位置
+    trackH = trackY_End - trackY_Start;
     
-    // 計算整個控制區的寬度
-    // 左邊軌道的左邊緣 ~ 右邊軌道的右邊緣
-    const totalWidth = (lastLane.x + lastLane.w) - firstLane.x;
-    
-    controls.style.width = totalWidth + "px";
-    controls.style.top = (hitY - firstLane.w/2) + "px"; // 讓按鈕中心對準判定線
-    controls.style.height = firstLane.w + "px"; // 按鈕高度等於軌道寬度
-    controls.style.bottom = "auto"; // 移除 bottom 定位，改用 top 對齊 Canvas
+    trackTopW = canvas.width * 0.1;     // 頂部寬度
+    trackBottomW = canvas.width * 0.95; // 底部寬度 (稍微留邊)
 
-    // 設定每個按鈕的大小與間距
-    const btns = document.querySelectorAll('.key-btn');
-    btns.forEach((btn, i) => {
-        btn.style.width = laneCoords[i].w + "px";
-        btn.style.height = laneCoords[i].w + "px";
-        // 由於 controls 是 flex，我們只需要確保寬度正確即可
-        // 這裡為了保險，我們加上 margin 來微調 (flex gap 有時不準)
-    });
-}
-
-// 簡單的星空背景
-let stars = [];
-function initStars() {
-    for(let i=0; i<80; i++) stars.push({
-        x: Math.random() * window.innerWidth, 
-        y: Math.random() * window.innerHeight,
-        s: Math.random() * 2
-    });
+    // 調整按鈕區域位置以對齊判定線
+    // 注意：CSS 的 .touch-pad 是 flex 自動均分的，這裡我們只需要視覺上對齊即可
+    // 由於我們限制了容器寬度，並讓軌道幾乎佔滿底部，按鈕自然會對齊
 }
 
 // --- 3. 節拍分析 ---
@@ -228,13 +260,12 @@ function analyzeBeats(buffer) {
     const step = Math.floor(sampleRate / 60); 
     
     generatedNotes = [];
-    
     let sum = 0;
     for (let i = 0; i < rawData.length; i += step) sum += Math.abs(rawData[i]);
-    const threshold = (sum / (rawData.length/step)) * 1.5; // 門檻
+    const threshold = (sum / (rawData.length/step)) * 1.6;
 
     let lastIndex = -10000;
-    const minDist = sampleRate * 0.3; // 最小間隔
+    const minDist = sampleRate * 0.3; 
 
     for (let i = 0; i < rawData.length; i += step) {
         if (Math.abs(rawData[i]) > threshold && (i - lastIndex) > minDist) {
@@ -246,18 +277,17 @@ function analyzeBeats(buffer) {
             lastIndex = i;
         }
     }
-
-    statusText.innerText = `READY: ${generatedNotes.length} BEATS`;
-    statusText.style.animation = "none";
-    statusText.style.color = "#fff";
-    startBtn.style.display = "block";
+    
+    statusText.innerText = "SYSTEM READY";
+    document.querySelector('.loading-bar').style.display = 'none';
+    startBtn.style.display = 'block';
 }
 
 // --- 4. 遊戲循環 ---
 function startGame() {
     if(!audioBuffer) return;
-    loaderLayer.style.opacity = 0;
-    setTimeout(() => loaderLayer.style.display = 'none', 500);
+    loader.style.opacity = 0;
+    setTimeout(() => loader.style.display = 'none', 500);
 
     activeNotes = JSON.parse(JSON.stringify(generatedNotes));
     audioSource = audioCtx.createBufferSource();
@@ -271,193 +301,152 @@ function startGame() {
     requestAnimationFrame(gameLoop);
 }
 
-// 計算透視座標
-function getPerspective(laneIndex, progress) {
-    const startY = canvas.height * TRACK_START_Y;
-    const endY = canvas.height * HIT_LINE_Y_POS;
-    const trackH = endY - startY;
-
-    // Y 軸位置
-    const currentY = startY + (trackH * progress);
-    
-    // 總寬度插值
-    const minW = canvas.width * TOP_WIDTH_RATIO;
-    const maxW = canvas.width * BOTTOM_WIDTH_RATIO;
-    const currentTotalW = minW + (maxW - minW) * progress;
-    
-    // 單一軌道寬度
+// 透視投影函數
+function getLaneCoords(lane, progress) {
+    const y = trackY_Start + (trackH * progress);
+    const currentTotalW = trackTopW + (trackBottomW - trackTopW) * progress;
     const laneW = currentTotalW / 4;
-    
-    // X 軸起始位置 (置中)
     const startX = (canvas.width - currentTotalW) / 2;
-    const x = startX + (laneIndex * laneW);
-    
-    return { x: x, y: currentY, w: laneW };
+    const x = startX + (lane * laneW);
+    return { x, y, w: laneW };
 }
 
 function gameLoop() {
     if(!isPlaying) return;
     const now = (audioCtx.currentTime * 1000) - startTime + LEAD_TIME;
 
-    // --- A. 更新計時器 ---
+    // --- 邏輯更新 ---
     if(audioBuffer) {
-        // 剩餘時間 = 總長 - (現在播放時間)
-        // audioCtx.currentTime 是秒
-        let currentSec = audioCtx.currentTime - (startTime/1000) + (LEAD_TIME/1000);
-        let remaining = audioBuffer.duration - currentSec;
-        
-        if (remaining < 0) {
-             remaining = 0;
-             isPlaying = false; // 結束
-        }
-
+        let remaining = audioBuffer.duration - (audioCtx.currentTime - (startTime/1000) + (LEAD_TIME/1000));
+        if (remaining < 0) { remaining = 0; isPlaying = false; }
         const m = Math.floor(remaining / 60);
         const s = Math.floor(remaining % 60);
-        timerBox.innerText = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+        timerEl.innerText = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
     }
 
-    // --- B. 繪圖 ---
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // --- 繪圖 ---
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // 星星
-    ctx.fillStyle = '#fff';
-    stars.forEach(s => { ctx.globalAlpha=Math.random()*0.5; ctx.fillRect(s.x, s.y, s.s, s.s); });
-    ctx.globalAlpha = 1;
-
-    // 1. 繪製軌道線 (Neon Style)
-    ctx.lineWidth = 2;
+    // 1. 繪製軌道線 (科技感)
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(0, 255, 255, 0.2)';
+    
+    // 垂直分隔線
     for(let i=0; i<=4; i++) {
-        const pStart = getPerspective(i, 0);
-        const pEnd = getPerspective(i, 1.2); // 延伸到底部
-        
+        const pStart = getLaneCoords(i, 0);
+        const pEnd = getLaneCoords(i, 1.2); // 延伸到底部
         ctx.beginPath();
         ctx.moveTo(pStart.x, pStart.y);
         ctx.lineTo(pEnd.x, pEnd.y);
-        // 使用淡藍色作為軌道邊界
-        ctx.strokeStyle = 'rgba(0, 191, 255, 0.3)'; 
         ctx.stroke();
     }
 
-    // 2. 繪製判定線 (雷射光束效果)
-    const pLeft = getPerspective(0, 1);
-    const pRight = getPerspective(4, 1); // 這是第4條線的起點，要加寬度才到右邊界
-    const rightX = getPerspective(3, 1).x + getPerspective(3, 1).w;
-
-    // 光暈層
-    ctx.shadowBlur = 30;
-    ctx.shadowColor = '#00FFFF';
-    ctx.strokeStyle = 'rgba(0, 255, 255, 0.8)';
-    ctx.lineWidth = 6;
-    ctx.beginPath();
-    ctx.moveTo(pLeft.x - 20, pLeft.y);
-    ctx.lineTo(rightX + 20, pLeft.y);
-    ctx.stroke();
+    // 2. 判定線 (雷射掃描)
+    const hitLeft = getLaneCoords(0, 1.0);
+    const hitRight = getLaneCoords(4, 1.0); // 實際上是第4軌的右邊界
     
-    // 核心層 (白亮)
-    ctx.shadowBlur = 0;
-    ctx.strokeStyle = '#fff';
+    // 軌道底部光暈
+    ctx.save();
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = '#0ff';
+    ctx.strokeStyle = '#0ff';
     ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(hitLeft.x, hitLeft.y);
+    ctx.lineTo(hitRight.x + hitRight.w, hitRight.y); // 注意這裡的寬度計算差異，修正如下
+    // getLaneCoords(4) 回傳的是第5條線的位置，所以直接用 x 即可
+    const pRightEdge = getLaneCoords(4, 1.0);
+    
+    ctx.beginPath();
+    ctx.moveTo(hitLeft.x, hitLeft.y);
+    ctx.lineTo(pRightEdge.x, pRightEdge.y);
     ctx.stroke();
+    ctx.restore();
 
-    // 3. 繪製按鈕光圈 (在判定線上)
-    for(let i=0; i<4; i++) {
-        const p = getPerspective(i, 1);
-        const cx = p.x + p.w/2;
-        const cy = p.y;
-        const radius = p.w * 0.4;
-
-        ctx.beginPath();
-        ctx.arc(cx, cy, radius, 0, Math.PI*2);
-        
-        if (activeKeys[i]) {
-            // 按下狀態：實心亮光
-            ctx.fillStyle = COLORS[i];
-            ctx.shadowBlur = 40; ctx.shadowColor = COLORS[i];
-            ctx.fill();
-            // 向上發射的光束
-            const pTop = getPerspective(i, 0);
-            const grad = ctx.createLinearGradient(0, cy, 0, pTop.y);
-            grad.addColorStop(0, COLORS[i]);
+    // 3. 軌道按壓回饋
+    activeKeys.forEach((active, i) => {
+        if(active) {
+            const p1 = getLaneCoords(i, 0);
+            const p2 = getLaneCoords(i, 1.0);
+            const color = LANE_COLORS[i];
+            
+            // 繪製梯形光束
+            const grad = ctx.createLinearGradient(0, p2.y, 0, p1.y);
+            grad.addColorStop(0, color);
             grad.addColorStop(1, 'transparent');
+            
             ctx.fillStyle = grad;
-            ctx.globalAlpha = 0.4;
+            ctx.globalAlpha = 0.3;
             ctx.beginPath();
-            ctx.moveTo(p.x, p.y); ctx.lineTo(p.x+p.w, p.y);
-            ctx.lineTo(pTop.x+pTop.w, pTop.y); ctx.lineTo(pTop.x, pTop.y);
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p1.x + p1.w, p1.y);
+            ctx.lineTo(p2.x + p2.w, p2.y);
+            ctx.lineTo(p2.x, p2.y);
             ctx.fill();
             ctx.globalAlpha = 1;
-        } else {
-            // 未按下：空心光圈
-            ctx.strokeStyle = COLORS[i];
-            ctx.lineWidth = 3;
-            ctx.shadowBlur = 10; ctx.shadowColor = COLORS[i];
-            ctx.stroke();
-        }
-        ctx.shadowBlur = 0;
-    }
-
-    // 4. 繪製音符
-    activeNotes.forEach(n => {
-        if(n.hit) return;
-        const remaining = (n.time + OFFSET) - now;
-        const progress = 1 - (remaining / LEAD_TIME);
-        
-        if (progress > 0 && progress < 1.1) {
-            const p = getPerspective(n.lane, progress);
             
-            // 音符主體 (發光方塊)
-            ctx.fillStyle = COLORS[n.lane];
-            ctx.shadowBlur = 20;
-            ctx.shadowColor = COLORS[n.lane];
-            
-            // 畫一個梯形音符
-            const scale = 0.6; // 音符佔軌道寬度的比例
-            const w = p.w * scale;
-            const h = p.w * scale * 0.6; // 扁一點符合透視
-            const x = p.x + (p.w - w)/2;
-            const y = p.y - h/2;
-
-            ctx.fillRect(x, y, w, h);
-            
-            // 核心白光
-            ctx.fillStyle = '#fff';
-            ctx.shadowBlur = 0;
-            ctx.fillRect(x + w*0.2, y + h*0.2, w*0.6, h*0.6);
-        }
-
-        // Miss 判定
-        if (remaining < -200) {
-            n.hit = true;
-            combo = 0; comboEl.innerText = 0;
-            comboEl.style.transform = "scale(1)";
-            judgeEl.innerText = "MISS"; judgeEl.style.color = "#555";
-            judgeEl.style.opacity = 1;
-            judgeEl.style.textShadow = "none";
+            // 底部高亮條
+            ctx.fillStyle = color;
+            ctx.fillRect(p2.x, p2.y - 2, p2.w, 4);
         }
     });
 
-    // 5. 粒子特效
+    // 4. 音符 (數位訊號塊)
+    activeNotes.forEach(n => {
+        if(n.hit) return;
+        const diff = (n.time + OFFSET) - now;
+        const progress = 1 - (diff / LEAD_TIME);
+
+        if(progress > 0 && progress < 1.1) {
+            const p = getLaneCoords(n.lane, progress);
+            const color = LANE_COLORS[n.lane];
+
+            // 繪製音符 (扁平科技方塊)
+            const noteH = p.w * 0.4; // 高度
+            const y = p.y - noteH; 
+            
+            ctx.fillStyle = color;
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = color;
+            
+            // 內縮一點，讓它看起來懸浮
+            const padding = p.w * 0.1;
+            ctx.fillRect(p.x + padding, y, p.w - padding*2, noteH);
+            
+            // 核心亮紋
+            ctx.fillStyle = '#fff';
+            ctx.shadowBlur = 0;
+            ctx.fillRect(p.x + padding, y + noteH*0.4, p.w - padding*2, noteH*0.2);
+        }
+
+        if (diff < -150) {
+            n.hit = true;
+            combo = 0; comboEl.innerText = 0;
+            showJudge("MISS", "#555");
+        }
+    });
+
+    // 5. 粒子
     updateParticles();
 
     requestAnimationFrame(gameLoop);
 }
 
-// 產生爆炸粒子
+// --- 粒子特效 (像素碎片) ---
 function spawnParticles(lane) {
-    const p = getPerspective(lane, 1);
+    const p = getLaneCoords(lane, 1.0);
     const cx = p.x + p.w/2;
     const cy = p.y;
-    const color = COLORS[lane];
-    
-    for(let i=0; i<12; i++) {
+    const color = LANE_COLORS[lane];
+
+    for(let i=0; i<8; i++) {
         particles.push({
             x: cx, y: cy,
-            vx: (Math.random() - 0.5) * 15,
-            vy: (Math.random() - 1) * 20,
+            vx: (Math.random() - 0.5) * 10,
+            vy: (Math.random() - 1) * 15,
+            size: Math.random() * 4 + 2,
             life: 1.0,
-            color: color,
-            size: Math.random() * 5 + 2
+            color: color
         });
     }
 }
@@ -465,20 +454,14 @@ function spawnParticles(lane) {
 function updateParticles() {
     for(let i=particles.length-1; i>=0; i--) {
         let p = particles[i];
-        p.x += p.vx;
-        p.y += p.vy;
-        p.vy += 0.8; // 重力
-        p.life -= 0.04;
+        p.x += p.vx; p.y += p.vy; p.vy += 0.8; p.life -= 0.05;
         
         if(p.life <= 0) particles.splice(i, 1);
         else {
             ctx.globalAlpha = p.life;
             ctx.fillStyle = p.color;
-            ctx.shadowBlur = 10; ctx.shadowColor = p.color;
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
-            ctx.fill();
-            ctx.shadowBlur = 0;
+            // 畫正方形像素
+            ctx.fillRect(p.x, p.y, p.size, p.size);
         }
     }
     ctx.globalAlpha = 1;
@@ -488,41 +471,46 @@ function updateParticles() {
 function handleInput(lane, isDown) {
     if(lane < 0 || lane >= 4) return;
     activeKeys[lane] = isDown;
+    
+    // UI 反饋
     const btn = document.getElementById(`btn-${lane}`);
-    if(btn) isDown ? btn.classList.add('active') : btn.classList.remove('active');
+    if(isDown) btn.classList.add('active');
+    else btn.classList.remove('active');
 
     if(isDown && isPlaying) {
         const now = (audioCtx.currentTime * 1000) - startTime + LEAD_TIME;
-        const note = activeNotes.find(n => !n.hit && n.lane === lane && Math.abs((n.time + OFFSET) - now) < 180);
+        const note = activeNotes.find(n => !n.hit && n.lane === lane && Math.abs((n.time + OFFSET) - now) < 160);
         
         if(note) {
             note.hit = true;
             combo++;
-            score += 100 + combo * 10;
+            score += 150;
             comboEl.innerText = combo;
+            scoreEl.innerText = score.toString().padStart(6, '0');
             
-            // Combo 動畫
-            comboEl.style.transform = "scale(1.3)";
+            // Combo 跳動
+            comboEl.style.transform = "scale(1.5)";
             setTimeout(() => comboEl.style.transform = "scale(1)", 100);
 
-            // 判定顯示
-            const err = Math.abs((note.time + OFFSET) - now);
-            let text = "GOOD";
-            let color = "#aaa";
-            if (err < 60) { text = "PERFECT"; color = COLORS[lane]; } // 用該軌道的顏色顯示 Perfect
-            
-            judgeEl.innerText = text;
-            judgeEl.style.color = color;
-            judgeEl.style.opacity = 1;
-            judgeEl.style.transform = "scale(1.2)";
-            setTimeout(() => { judgeEl.style.transform = "scale(1)"; judgeEl.style.opacity = 0; }, 200);
+            // 判定
+            const diff = Math.abs((note.time + OFFSET) - now);
+            if(diff < 50) showJudge("PERFECT", "#0ff");
+            else showJudge("GOOD", "#ff0");
 
             spawnParticles(lane);
         }
     }
 }
 
-// 綁定事件
+function showJudge(text, color) {
+    judgeEl.innerText = text;
+    judgeEl.style.color = color;
+    judgeEl.style.opacity = 1;
+    judgeEl.style.transform = "scale(1.2)";
+    setTimeout(() => { judgeEl.style.opacity = 0; judgeEl.style.transform = "scale(1)"; }, 150);
+}
+
+// 事件綁定
 LANE_KEYS.forEach((k, i) => {
     const el = document.getElementById(`btn-${i}`);
     el.addEventListener('touchstart', (e)=>{ e.preventDefault(); handleInput(i, true); });
