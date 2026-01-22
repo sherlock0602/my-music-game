@@ -3,21 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Neon Beat - High Score Edition</title>
+    <title>Neon Beat - Difficulty & Offset Edition</title>
     <style>
-        * {
-            -webkit-tap-highlight-color: transparent;
-            -webkit-touch-callout: none;
-            -webkit-user-select: none;
-            user-select: none;
-            outline: none;
-        }
+        * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; outline: none; }
         body { margin: 0; background: #050505; color: white; overflow: hidden; font-family: 'Segoe UI', sans-serif; touch-action: none; }
         canvas { display: block; }
 
-        /* UI 樣式 */
+        /* UI */
         #ui { position: absolute; top: 20px; width: 100%; text-align: center; pointer-events: none; z-index: 5; }
-        #score-display { font-size: 24px; color: #fff; margin: 0; }
+        #score-display { font-size: 20px; color: #aaa; margin: 0; }
         #combo { font-size: 60px; font-weight: bold; color: #0ff; margin: 5px 0; text-shadow: 0 0 20px #0ff; }
 
         /* 虛擬按鍵 */
@@ -29,29 +23,38 @@
         }
         .touch-btn.active { background: rgba(0, 255, 255, 0.3); transform: scale(0.9); border-color: #0ff; }
 
-        /* 遮罩畫面樣式 */
+        /* 覆蓋畫面 */
         .overlay { 
             position: absolute; inset: 0; background: radial-gradient(circle, #111 0%, #000 100%); 
             display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 30;
         }
-        .start-btn { padding: 18px 50px; font-size: 22px; cursor: pointer; background: transparent; color: #0ff; border: 2px solid #0ff; border-radius: 50px; margin-top: 20px; }
-        .best-score { color: #bcff00; font-size: 18px; margin-top: 10px; text-shadow: 0 0 10px rgba(188, 255, 0, 0.5); }
+        .menu-group { display: flex; gap: 10px; margin-top: 20px; }
+        .diff-btn { 
+            padding: 12px 25px; font-size: 16px; cursor: pointer; background: transparent; 
+            color: #0ff; border: 1px solid #0ff; border-radius: 30px; transition: 0.3s;
+        }
+        .diff-btn:hover { background: rgba(0, 255, 255, 0.2); }
+        .best-score { color: #bcff00; font-size: 18px; margin-top: 10px; }
     </style>
 </head>
 <body>
 
     <div id="start-overlay" class="overlay">
-        <h1 style="color: #0ff; text-shadow: 0 0 20px #0ff;">NEON BEAT</h1>
+        <h1 style="color: #0ff; text-shadow: 0 0 20px #0ff; letter-spacing: 5px;">NEON BEAT</h1>
         <div id="main-best-score" class="best-score">BEST: 0</div>
-        <button class="start-btn" id="start-btn">START GAME</button>
+        <p style="margin-top: 30px; color: #888;">選擇難度開始遊戲</p>
+        <div class="menu-group">
+            <button class="diff-btn" onclick="startGame('easy')">EASY</button>
+            <button class="diff-btn" onclick="startGame('normal')">NORMAL</button>
+            <button class="diff-btn" onclick="startGame('hard')">HARD</button>
+        </div>
     </div>
 
     <div id="end-overlay" class="overlay" style="display: none;">
-        <h2 style="color: #0ff;">MISSION COMPLETE</h2>
+        <h2 style="color: #0ff;">FINISH</h2>
         <div id="final-score" style="font-size: 48px; margin: 10px 0;">0</div>
-        <div id="new-record" style="color: #ff0055; font-weight: bold; display: none; margin-bottom: 10px;">NEW RECORD!</div>
         <div id="end-best-score" class="best-score">BEST: 0</div>
-        <button class="start-btn" onclick="location.reload()">REPLAY</button>
+        <button class="diff-btn" style="margin-top: 30px; padding: 15px 40px;" onclick="location.reload()">RETRY</button>
     </div>
 
     <div id="ui">
@@ -76,6 +79,12 @@ const comboEl = document.getElementById('combo');
 const scoreEl = document.getElementById('score-display');
 const judgeEl = document.getElementById('judgement');
 
+// --- 調節參數 ---
+let GLOBAL_OFFSET = -150; // 如果節拍太慢到判定線，將此值調更負(如-200)；太快到則調正
+let NOTE_SPEED = 0.5;    // 下落速度
+let BEAT_THRESHOLD = 210; // 靈敏度 (越低越容易生出方塊)
+let BEAT_COOLDOWN = 250;  // 生成密度
+
 const LANES = 4;
 const LANE_KEYS = ['d', 'f', 'j', 'k'];
 const COLORS = ['#FF0055', '#00FBFF', '#BCFF00', '#FF9500'];
@@ -85,7 +94,6 @@ let audioCtx, analyser, dataArray, source, audio;
 let startTime = 0, isPlaying = false, combo = 0, score = 0, lastBeatTime = 0;
 let notes = [], particles = [], activeKeys = [false, false, false, false];
 
-// 分數紀錄初始化
 let bestScore = localStorage.getItem('neonBeatBestScore') || 0;
 document.getElementById('main-best-score').innerText = `BEST: ${bestScore}`;
 
@@ -96,6 +104,50 @@ function initLayout() {
     judgeY = canvas.height * 0.75; 
 }
 
+function startGame(mode) {
+    // 難度分級設定
+    if (mode === 'easy') {
+        NOTE_SPEED = 0.4;
+        BEAT_THRESHOLD = 225; 
+        BEAT_COOLDOWN = 400;
+    } else if (mode === 'normal') {
+        NOTE_SPEED = 0.6;
+        BEAT_THRESHOLD = 210;
+        BEAT_COOLDOWN = 250;
+    } else {
+        NOTE_SPEED = 0.9;
+        BEAT_THRESHOLD = 195;
+        BEAT_COOLDOWN = 150;
+    }
+
+    initLayout();
+    initAudio();
+}
+
+async function initAudio() {
+    try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 256;
+        dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+        audio = new Audio('your_music.mp3'); 
+        audio.crossOrigin = "anonymous";
+        source = audioCtx.createMediaElementSource(audio);
+        source.connect(analyser);
+        analyser.connect(audioCtx.destination);
+
+        await audio.play();
+        document.getElementById('start-overlay').style.display = 'none';
+        startTime = performance.now();
+        isPlaying = true;
+        draw();
+        audio.onended = endGame;
+    } catch (err) {
+        alert("請確認檔案 your_music.mp3 已上傳");
+    }
+}
+
 function spawnNote(now) {
     if (!analyser) return;
     analyser.getByteFrequencyData(dataArray);
@@ -103,8 +155,9 @@ function spawnNote(now) {
     for(let i=0; i<4; i++) lowEnergy += dataArray[i];
     const avg = lowEnergy / 4;
 
-    if (avg > 205 && (now - lastBeatTime) > 180) {
-        notes.push({ time: now + 1200, lane: Math.floor(Math.random() * LANES), hit: false, missed: false });
+    if (avg > BEAT_THRESHOLD && (now - lastBeatTime) > BEAT_COOLDOWN) {
+        // 加入 GLOBAL_OFFSET 進行校準
+        notes.push({ time: now + 1200 + GLOBAL_OFFSET, lane: Math.floor(Math.random() * LANES), hit: false, missed: false });
         lastBeatTime = now;
     }
 }
@@ -116,25 +169,15 @@ function handleInput(laneIndex, isDown) {
     if (isDown) {
         btn.classList.add('active');
         const now = performance.now() - startTime;
-        const noteIdx = notes.findIndex(n => !n.hit && !n.missed && n.lane === laneIndex && Math.abs(n.time - now) < 200);
+        const noteIdx = notes.findIndex(n => !n.hit && !n.missed && n.lane === laneIndex && Math.abs(n.time - now) < 150);
         
         if(noteIdx !== -1) {
-            const diff = Math.abs(notes[noteIdx].time - now);
             notes[noteIdx].hit = true;
-            combo++;
-            // 分數加成邏輯
-            if (diff < 70) {
-                score += 100;
-                judgeEl.innerText = "PERFECT";
-                judgeEl.style.color = "#0ff";
-            } else {
-                score += 50;
-                judgeEl.innerText = "GREAT";
-                judgeEl.style.color = "#bcff00";
-            }
+            combo++; score += 100;
             updateUI();
+            judgeEl.innerText = "PERFECT"; judgeEl.style.color = "#0ff";
             const x = (canvas.width/2 - (laneWidth*2)) + (laneIndex * laneWidth) + laneWidth/2;
-            for(let i=0; i<8; i++) particles.push({ x, y: judgeY, color: COLORS[laneIndex], vx: (Math.random()-0.5)*12, vy: (Math.random()-0.5)*12, life: 1.0 });
+            for(let i=0; i<6; i++) particles.push({ x, y: judgeY, color: COLORS[laneIndex], vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10, life: 1.0 });
         }
     } else {
         btn.classList.remove('active');
@@ -150,10 +193,8 @@ function endGame() {
     isPlaying = false;
     document.getElementById('end-overlay').style.display = 'flex';
     document.getElementById('final-score').innerText = score;
-    
     if (score > bestScore) {
         localStorage.setItem('neonBeatBestScore', score);
-        document.getElementById('new-record').style.display = 'block';
         bestScore = score;
     }
     document.getElementById('end-best-score').innerText = `BEST: ${bestScore}`;
@@ -164,26 +205,21 @@ function draw() {
     const now = performance.now() - startTime;
     spawnNote(now);
     
-    ctx.fillStyle = 'rgba(5, 5, 5, 0.4)'; 
+    ctx.fillStyle = 'rgba(5, 5, 5, 0.5)'; 
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     const startX = canvas.width/2 - (laneWidth * 2);
 
     LANE_KEYS.forEach((_, i) => {
         const x = startX + i * laneWidth;
-        if (activeKeys[i]) {
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-            ctx.fillRect(x, 0, laneWidth, judgeY);
-        }
-        ctx.strokeStyle = activeKeys[i] ? COLORS[i] : 'rgba(0, 255, 255, 0.2)';
-        ctx.lineWidth = 3;
+        ctx.strokeStyle = activeKeys[i] ? COLORS[i] : 'rgba(0, 255, 255, 0.15)';
         ctx.strokeRect(x + 5, judgeY, laneWidth - 10, 2);
     });
 
-    notes = notes.filter(note => !note.hit && (now - note.time < 500));
+    notes = notes.filter(note => !note.hit && (now - note.time < 300));
     notes.forEach(note => {
         const timeDiff = note.time - now;
-        const y = judgeY - (timeDiff * 0.8);
+        const y = judgeY - (timeDiff * NOTE_SPEED);
         if(y > -50 && y < canvas.height + 50) {
             const x = startX + note.lane * laneWidth + 10;
             ctx.fillStyle = COLORS[note.lane];
@@ -197,7 +233,7 @@ function draw() {
 
     particles = particles.filter(p => p.life > 0);
     particles.forEach(p => {
-        p.x += p.vx; p.y += p.vy; p.life -= 0.04;
+        p.x += p.vx; p.y += p.vy; p.life -= 0.05;
         ctx.globalAlpha = p.life; ctx.fillStyle = p.color;
         ctx.fillRect(p.x, p.y, 3, 3);
     });
@@ -206,7 +242,12 @@ function draw() {
     requestAnimationFrame(draw);
 }
 
-// 事件綁定
+// 綁定事件
+LANE_KEYS.forEach((_, i) => {
+    const btn = document.getElementById(`btn-${i}`);
+    btn.addEventListener('touchstart', (e) => { e.preventDefault(); handleInput(i, true); }, {passive: false});
+    btn.addEventListener('touchend', (e) => { e.preventDefault(); handleInput(i, false); }, {passive: false});
+});
 window.addEventListener('keydown', (e) => {
     const lane = LANE_KEYS.indexOf(e.key.toLowerCase());
     if(lane !== -1 && !activeKeys[lane]) handleInput(lane, true);
@@ -215,37 +256,6 @@ window.addEventListener('keyup', (e) => {
     const lane = LANE_KEYS.indexOf(e.key.toLowerCase());
     if(lane !== -1) handleInput(lane, false);
 });
-
-LANE_KEYS.forEach((_, i) => {
-    const btn = document.getElementById(`btn-${i}`);
-    btn.addEventListener('touchstart', (e) => { e.preventDefault(); handleInput(i, true); }, {passive: false});
-    btn.addEventListener('touchend', (e) => { e.preventDefault(); handleInput(i, false); }, {passive: false});
-});
-
-document.getElementById('start-btn').addEventListener('click', async () => {
-    initLayout();
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    analyser = audioCtx.createAnalyser();
-    analyser.fftSize = 256;
-    dataArray = new Uint8Array(analyser.frequencyBinCount);
-
-    audio = new Audio('your_music.mp3'); 
-    audio.crossOrigin = "anonymous";
-    try {
-        source = audioCtx.createMediaElementSource(audio);
-        source.connect(analyser);
-        analyser.connect(audioCtx.destination);
-        await audio.play();
-        document.getElementById('start-overlay').style.display = 'none';
-        startTime = performance.now();
-        isPlaying = true;
-        draw();
-        
-        // 音樂結束自動結算
-        audio.onended = endGame;
-    } catch (err) { alert("找不到音樂檔案 your_music.mp3"); }
-});
-
 window.addEventListener('resize', initLayout);
 </script>
 </body>
