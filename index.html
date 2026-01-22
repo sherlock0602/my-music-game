@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Neon Beat - Stable Version</title>
+    <title>Neon Beat - GitHub Music Edition</title>
     <style>
         body { margin: 0; background: #050505; color: white; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
         canvas { display: block; }
@@ -18,13 +18,15 @@
             color: #0ff; border: 2px solid #0ff; border-radius: 50px; transition: 0.3s;
         }
         .start-btn:hover { background: #0ff; color: #000; box-shadow: 0 0 30px #0ff; }
+        #loading { display: none; margin-top: 20px; color: #0ff; }
     </style>
 </head>
 <body>
 
     <div id="overlay">
-        <h1 style="color: #0ff; text-shadow: 0 0 20px #0ff;">NEON BEAT</h1>
-        <button class="start-btn" id="start-btn">選取音樂並開始</button>
+        <h1 style="color: #0ff; text-shadow: 0 0 20px #0ff; letter-spacing: 5px;">NEON BEAT</h1>
+        <button class="start-btn" id="start-btn">START GAME</button>
+        <div id="loading">載入音樂中...</div>
     </div>
 
     <div id="ui">
@@ -42,19 +44,20 @@ const judgeEl = document.getElementById('judgement');
 const LANES = 4;
 const LANE_KEYS = ['d', 'f', 'j', 'k'];
 const COLORS = ['#FF0055', '#00FBFF', '#BCFF00', '#FF9500'];
-const BEAT_THRESHOLD = 200; 
-const BEAT_COOLDOWN = 150;
+const BEAT_THRESHOLD = 205; 
+const BEAT_COOLDOWN = 180;
 let laneWidth, judgeY;
 
-let audioCtx, analyser, dataArray, source;
+let audioCtx, analyser, dataArray, source, audio;
 let startTime = 0, isPlaying = false, combo = 0, lastBeatTime = 0;
 let notes = [], particles = [];
+let activeKeys = [false, false, false, false];
 
 function initLayout() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
     laneWidth = Math.min(120, canvas.width / 5);
-    judgeY = canvas.height * 0.85;
+    judgeY = canvas.height * 0.82; // 稍微往上提，留空間給提示字
 }
 
 function spawnNote(now) {
@@ -65,12 +68,7 @@ function spawnNote(now) {
     const avg = lowEnergy / 4;
 
     if (avg > BEAT_THRESHOLD && (now - lastBeatTime) > BEAT_COOLDOWN) {
-        notes.push({
-            time: now + 1200, 
-            lane: Math.floor(Math.random() * LANES),
-            hit: false,
-            missed: false
-        });
+        notes.push({ time: now + 1200, lane: Math.floor(Math.random() * LANES), hit: false, missed: false });
         lastBeatTime = now;
     }
 }
@@ -81,23 +79,40 @@ function draw() {
     
     try {
         spawnNote(now);
-
         ctx.fillStyle = 'rgba(5, 5, 5, 0.4)'; 
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         const startX = canvas.width/2 - (laneWidth * 2);
 
-        // 判定線
-        ctx.fillStyle = 'rgba(0, 255, 255, 0.3)';
-        ctx.fillRect(startX, judgeY, laneWidth * LANES, 4);
+        // 繪製軌道與提示字
+        LANE_KEYS.forEach((key, i) => {
+            const x = startX + i * laneWidth;
+            
+            // 按鍵按下時的發光效果
+            if (activeKeys[i]) {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+                ctx.fillRect(x, 0, laneWidth, judgeY);
+            }
 
-        // 處理音符 (使用過濾確保不累積廢棄數據)
+            // 繪製判定線下方提示字
+            ctx.fillStyle = activeKeys[i] ? COLORS[i] : '#555';
+            ctx.font = "bold 30px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText(key.toUpperCase(), x + laneWidth/2, judgeY + 50);
+            
+            // 繪製判定線小段
+            ctx.strokeStyle = activeKeys[i] ? COLORS[i] : 'rgba(0, 255, 255, 0.3)';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(x + 5, judgeY); ctx.lineTo(x + laneWidth - 5, judgeY);
+            ctx.stroke();
+        });
+
+        // 處理音符
         notes = notes.filter(note => !note.hit && (now - note.time < 500));
-
         notes.forEach(note => {
             const timeDiff = note.time - now;
             const y = judgeY - (timeDiff * 0.8);
-
             if(y > -50 && y < canvas.height + 50) {
                 const x = startX + note.lane * laneWidth + 10;
                 ctx.fillStyle = COLORS[note.lane];
@@ -105,16 +120,9 @@ function draw() {
                 ctx.fillRect(x, y - 10, laneWidth - 20, 15);
                 ctx.shadowBlur = 0;
             }
-
-            // 漏接邏輯：超過判定線 150ms 算 Miss
             if(timeDiff < -150 && !note.missed) {
-                note.missed = true;
-                combo = 0;
-                comboEl.innerText = combo;
-                judgeEl.innerText = "MISS";
-                judgeEl.style.color = "red";
-                // 300ms 後清除判定文字
-                setTimeout(() => { if(judgeEl.innerText === "MISS") judgeEl.innerText = ""; }, 300);
+                note.missed = true; combo = 0; comboEl.innerText = combo;
+                judgeEl.innerText = "MISS"; judgeEl.style.color = "red";
             }
         });
 
@@ -122,75 +130,69 @@ function draw() {
         particles = particles.filter(p => p.life > 0);
         particles.forEach(p => {
             p.x += p.vx; p.y += p.vy; p.life -= 0.03;
-            ctx.globalAlpha = p.life;
-            ctx.fillStyle = p.color;
+            ctx.globalAlpha = p.life; ctx.fillStyle = p.color;
             ctx.fillRect(p.x, p.y, 4, 4);
         });
         ctx.globalAlpha = 1;
 
-    } catch (e) {
-        console.error("Loop Error:", e);
-    }
-
+    } catch (e) { console.error(e); }
     requestAnimationFrame(draw);
 }
 
+// 監聽鍵盤
 window.addEventListener('keydown', (e) => {
-    if(!isPlaying) return;
     const lane = LANE_KEYS.indexOf(e.key.toLowerCase());
-    if(lane === -1) return;
-
-    const now = performance.now() - startTime;
-    // 找出最接近判定時間的音符
-    const noteIdx = notes.findIndex(n => !n.hit && !n.missed && n.lane === lane && Math.abs(n.time - now) < 200);
-
-    if(noteIdx !== -1) {
-        const note = notes[noteIdx];
-        note.hit = true;
-        combo++;
-        comboEl.innerText = combo;
-        judgeEl.innerText = "PERFECT";
-        judgeEl.style.color = "#0ff";
-        
-        // 噴發粒子
-        const x = (canvas.width/2 - (laneWidth*2)) + (lane * laneWidth) + laneWidth/2;
-        for(let i=0; i<10; i++) {
-            particles.push({
-                x: x, y: judgeY, color: COLORS[lane],
-                vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15, life: 1.0
-            });
+    if(lane !== -1) {
+        activeKeys[lane] = true;
+        const now = performance.now() - startTime;
+        const noteIdx = notes.findIndex(n => !n.hit && !n.missed && n.lane === lane && Math.abs(n.time - now) < 200);
+        if(noteIdx !== -1) {
+            notes[noteIdx].hit = true;
+            combo++; comboEl.innerText = combo;
+            judgeEl.innerText = "PERFECT"; judgeEl.style.color = "#0ff";
+            const x = (canvas.width/2 - (laneWidth*2)) + (lane * laneWidth) + laneWidth/2;
+            for(let i=0; i<10; i++) particles.push({ x, y: judgeY, color: COLORS[lane], vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15, life: 1.0 });
         }
     }
 });
 
-document.getElementById('start-btn').addEventListener('click', () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'audio/*';
-    input.onchange = (e) => {
-        const file = e.target.files[0];
-        if(!file) return;
-        
-        document.getElementById('overlay').style.display = 'none';
-        initLayout();
-        
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        analyser = audioCtx.createAnalyser();
-        analyser.fftSize = 256;
-        dataArray = new Uint8Array(analyser.frequencyBinCount);
+window.addEventListener('keyup', (e) => {
+    const lane = LANE_KEYS.indexOf(e.key.toLowerCase());
+    if(lane !== -1) activeKeys[lane] = false;
+});
 
-        const audio = new Audio(URL.createObjectURL(file));
+// 啟動遊戲 (讀取 GitHub 上的音樂)
+document.getElementById('start-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('start-btn');
+    const loading = document.getElementById('loading');
+    btn.style.display = 'none';
+    loading.style.display = 'block';
+
+    initLayout();
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 256;
+    dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+    // 直接讀取同資料夾下的音樂檔
+    audio = new Audio('your_music.mp3'); 
+    audio.crossOrigin = "anonymous";
+    
+    try {
         source = audioCtx.createMediaElementSource(audio);
         source.connect(analyser);
         analyser.connect(audioCtx.destination);
         
-        audio.play().then(() => {
-            startTime = performance.now();
-            isPlaying = true;
-            draw();
-        });
-    };
-    input.click();
+        await audio.play();
+        document.getElementById('overlay').style.display = 'none';
+        startTime = performance.now();
+        isPlaying = true;
+        draw();
+    } catch (err) {
+        alert("找不到音樂檔案！請確認 GitHub 上是否有上傳 your_music.mp3");
+        btn.style.display = 'block';
+        loading.style.display = 'none';
+    }
 });
 
 window.addEventListener('resize', initLayout);
