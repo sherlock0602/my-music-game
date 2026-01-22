@@ -3,47 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Neon Beat - Precision Sync Edition</title>
+    <title>Neon Beat - Ultra Edition</title>
     <style>
-        /* 基礎防錯設定 */
-        * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; outline: none; }
-        body { margin: 0; background: #050505; color: white; overflow: hidden; font-family: 'Segoe UI', sans-serif; touch-action: none; }
-        canvas { display: block; }
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+
+        * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; outline: none; box-sizing: border-box; }
+        body { margin: 0; background: #000; color: white; overflow: hidden; font-family: 'Orbitron', sans-serif; touch-action: none; }
+        canvas { display: block; filter: blur(0.5px) contrast(1.1); }
 
         /* UI 層 */
-        #ui { position: absolute; top: 20px; width: 100%; text-align: center; pointer-events: none; z-index: 5; }
-        #combo { font-size: 60px; font-weight: bold; color: #0ff; margin: 5px 0; text-shadow: 0 0 20px #0ff; }
+        #ui { position: absolute; top: 40px; width: 100%; text-align: center; pointer-events: none; z-index: 5; }
+        #score-display { font-size: 18px; letter-spacing: 2px; color: rgba(255,255,255,0.6); margin-bottom: 0; }
+        #combo { font-size: 80px; font-weight: 800; color: #fff; margin: 0; text-shadow: 0 0 30px #0ff; animation: pulse 0.1s ease-out; }
+        #judgement { font-size: 28px; font-weight: bold; height: 40px; text-transform: uppercase; letter-spacing: 5px; margin-top: 10px; }
 
-        /* 虛擬按鍵 */
-        #touch-controls { position: absolute; bottom: 30px; width: 100%; display: flex; justify-content: center; gap: 20px; z-index: 20; }
-        .touch-btn {
-            width: 75px; height: 75px; border: 2px solid rgba(0, 255, 255, 0.4); border-radius: 50%;
-            display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold;
-            color: rgba(255, 255, 255, 0.7); background: rgba(255, 255, 255, 0.05); transition: 0.1s;
+        @keyframes pulse {
+            0% { transform: scale(1.1); }
+            100% { transform: scale(1); }
         }
-        .touch-btn.active { background: rgba(0, 255, 255, 0.4); transform: scale(0.9); border-color: #0ff; }
+
+        /* 虛擬按鍵優化 */
+        #touch-controls { position: absolute; bottom: 50px; width: 100%; display: flex; justify-content: center; gap: 25px; z-index: 20; }
+        .touch-btn {
+            width: 70px; height: 70px; border: 2px solid rgba(255, 255, 255, 0.2); border-radius: 15px;
+            display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: bold;
+            color: white; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(5px);
+            transition: all 0.1s; box-shadow: 0 0 15px rgba(0,0,0,0.5);
+        }
+        .touch-btn.active { transform: scale(0.85); background: #0ff; color: #000; border-color: #0ff; box-shadow: 0 0 30px #0ff; }
 
         /* 選單與結算 */
-        .overlay { position: absolute; inset: 0; background: radial-gradient(circle, #111 0%, #000 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 30; }
-        .diff-btn { padding: 15px 40px; font-size: 18px; cursor: pointer; background: transparent; color: #0ff; border: 1px solid #0ff; border-radius: 30px; margin: 10px; }
+        .overlay { position: absolute; inset: 0; background: radial-gradient(circle at center, #1a1a2e 0%, #000 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 30; }
+        .diff-btn { 
+            padding: 15px 50px; font-size: 16px; cursor: pointer; background: transparent; color: #fff; 
+            border: 2px solid #0ff; border-radius: 5px; margin: 15px; font-family: 'Orbitron';
+            transition: 0.3s; letter-spacing: 3px; overflow: hidden; position: relative;
+        }
+        .diff-btn:hover { background: #0ff; color: #000; box-shadow: 0 0 40px rgba(0, 255, 255, 0.6); }
+
+        /* 裝飾背景 */
+        .bg-glow { position: absolute; width: 100%; height: 100%; background: radial-gradient(circle at 50% 100%, #001f3f 0%, transparent 70%); pointer-events: none; opacity: 0.5; }
     </style>
 </head>
 <body>
 
+    <div class="bg-glow"></div>
+
     <div id="start-overlay" class="overlay">
-        <h1 style="color: #0ff; text-shadow: 0 0 20px #0ff;">NEON BEAT</h1>
-        <p style="color: #888;">精準節拍同步版</p>
-        <div style="display: flex; gap: 10px;">
-            <button class="diff-btn" onclick="initGame('easy')">EASY</button>
-            <button class="diff-btn" onclick="initGame('normal')">NORMAL</button>
-            <button class="diff-btn" onclick="initGame('hard')">HARD</button>
+        <h1 style="font-size: 60px; color: #fff; text-shadow: 0 0 30px #0ff; margin-bottom: 5px;">NEON BEAT</h1>
+        <p style="color: #0ff; letter-spacing: 8px; margin-bottom: 40px; font-size: 12px;">PRECISION SYNC</p>
+        <div style="display: flex; flex-direction: column;">
+            <button class="diff-btn" onclick="initGame('easy')">LEVEL: CHILL</button>
+            <button class="diff-btn" onclick="initGame('normal')">LEVEL: FLOW</button>
+            <button class="diff-btn" onclick="initGame('hard')">LEVEL: OVERDRIVE</button>
         </div>
     </div>
 
     <div id="ui">
-        <p id="score-display">SCORE: 0</p>
+        <p id="score-display">DATA SYNC: 0</p>
         <p id="combo">0</p>
-        <div id="judgement" style="font-size: 24px; font-weight: bold; height: 30px;">READY</div>
+        <div id="judgement">READY</div>
     </div>
 
     <canvas id="gameCanvas"></canvas>
@@ -63,27 +82,29 @@ const scoreEl = document.getElementById('score-display');
 const judgeEl = document.getElementById('judgement');
 
 // --- 核心參數 ---
-const LEAD_TIME = 1200; // 方塊下落的總時長 (毫秒)
-let NOTE_SPEED = 0.6;   // 速度
+const LEAD_TIME = 1200; 
+let NOTE_SPEED = 0.8;   
 let BEAT_THRESHOLD = 210; 
 let BEAT_COOLDOWN = 200;
 
 const LANES = 4;
 const LANE_KEYS = ['d', 'f', 'j', 'k'];
 const COLORS = ['#FF0055', '#00FBFF', '#BCFF00', '#FF9500'];
+const GLOW_COLORS = ['rgba(255,0,85,0.5)', 'rgba(0,251,255,0.5)', 'rgba(188,255,0,0.5)', 'rgba(255,149,0,0.5)'];
 
 let audioCtx, analyser, dataArray, delayNode, source, audio;
 let startTime = 0, isPlaying = false, combo = 0, score = 0, lastBeatTime = 0;
 let notes = [], activeKeys = [false, false, false, false];
+let particles = [];
 
 function initGame(mode) {
-    if (mode === 'easy') { NOTE_SPEED = 0.5; BEAT_THRESHOLD = 220; BEAT_COOLDOWN = 400; }
-    else if (mode === 'hard') { NOTE_SPEED = 0.9; BEAT_THRESHOLD = 200; BEAT_COOLDOWN = 150; }
+    if (mode === 'easy') { NOTE_SPEED = 0.6; BEAT_THRESHOLD = 220; BEAT_COOLDOWN = 400; }
+    else if (mode === 'hard') { NOTE_SPEED = 1.1; BEAT_THRESHOLD = 190; BEAT_COOLDOWN = 150; }
     
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
-    laneWidth = Math.min(100, canvas.width / 5);
-    judgeY = canvas.height * 0.75;
+    laneWidth = Math.min(80, canvas.width / 5);
+    judgeY = canvas.height * 0.8;
 
     setupAudio();
 }
@@ -94,72 +115,119 @@ async function setupAudio() {
     analyser.fftSize = 256;
     dataArray = new Uint8Array(analyser.frequencyBinCount);
 
-    // 關鍵：使用 DelayNode 將聲音延後播放
     delayNode = audioCtx.createDelay(2.0);
-    delayNode.delayTime.value = LEAD_TIME / 1000; // 將聲音延遲 LEAD_TIME 秒
+    delayNode.delayTime.value = LEAD_TIME / 1000;
 
-    audio = new Audio('your_music.mp3');
+    audio = new Audio('your_music.mp3'); // 請更換為正確路徑
     audio.crossOrigin = "anonymous";
     
     source = audioCtx.createMediaElementSource(audio);
-    
-    // 音訊路線：Source -> Analyser (即時偵測) -> DelayNode (延遲) -> Destination (播放)
     source.connect(analyser);
     analyser.connect(delayNode);
     delayNode.connect(audioCtx.destination);
 
-    await audio.play();
-    document.getElementById('start-overlay').style.display = 'none';
-    startTime = performance.now();
-    isPlaying = true;
-    requestAnimationFrame(gameLoop);
+    try {
+        await audio.play();
+        document.getElementById('start-overlay').style.display = 'none';
+        startTime = performance.now();
+        isPlaying = true;
+        requestAnimationFrame(gameLoop);
+    } catch(e) {
+        alert("請點擊頁面以啟動音樂！");
+    }
+}
+
+function createParticles(x, y, color) {
+    for(let i=0; i<10; i++) {
+        particles.push({
+            x: x, y: y,
+            vx: (Math.random() - 0.5) * 10,
+            vy: (Math.random() - 0.5) * 10,
+            life: 1.0,
+            color: color
+        });
+    }
 }
 
 function gameLoop() {
     if(!isPlaying) return;
     const now = performance.now() - startTime;
 
-    // 1. 偵測當前音樂頻譜 (這是音樂尚未被延遲的原始訊號)
     analyser.getByteFrequencyData(dataArray);
     let lowEnergy = 0;
     for(let i=0; i<5; i++) lowEnergy += dataArray[i];
     const avg = lowEnergy / 5;
 
-    // 2. 如果偵測到重音，生成一個在 LEAD_TIME 後才「響起」的音符
     if (avg > BEAT_THRESHOLD && (now - lastBeatTime) > BEAT_COOLDOWN) {
         notes.push({
-            targetTime: now + LEAD_TIME, // 音樂在 LEAD_TIME 後才會播到這裡
+            targetTime: now + LEAD_TIME,
             lane: Math.floor(Math.random() * LANES),
             hit: false
         });
         lastBeatTime = now;
     }
 
-    // 3. 繪製畫面
-    ctx.fillStyle = '#050505';
+    // 清除畫布 - 帶有一點透明度以產生殘影
+    ctx.fillStyle = 'rgba(5, 5, 5, 0.3)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+
     const startX = canvas.width/2 - (laneWidth * 2);
 
+    // 繪製軌道與判定線
     LANE_KEYS.forEach((_, i) => {
         const x = startX + i * laneWidth;
-        ctx.strokeStyle = activeKeys[i] ? COLORS[i] : 'rgba(0, 255, 255, 0.1)';
-        ctx.strokeRect(x+5, judgeY, laneWidth-10, 2);
+        // 軌道光暈
+        if (activeKeys[i]) {
+            const grad = ctx.createLinearGradient(x, judgeY, x, 0);
+            grad.addColorStop(0, GLOW_COLORS[i]);
+            grad.addColorStop(1, 'transparent');
+            ctx.fillStyle = grad;
+            ctx.fillRect(x + 5, 0, laneWidth - 10, judgeY);
+        }
+        
+        ctx.strokeStyle = activeKeys[i] ? COLORS[i] : 'rgba(255, 255, 255, 0.2)';
+        ctx.lineWidth = activeKeys[i] ? 4 : 2;
+        ctx.beginPath();
+        ctx.moveTo(x + 5, judgeY);
+        ctx.lineTo(x + laneWidth - 5, judgeY);
+        ctx.stroke();
     });
 
-    // 4. 更新與繪製音符
+    // 更新粒子
+    particles.forEach((p, i) => {
+        p.x += p.vx; p.y += p.vy; p.life -= 0.02;
+        if(p.life <= 0) particles.splice(i, 1);
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = p.life;
+        ctx.fillRect(p.x, p.y, 4, 4);
+    });
+    ctx.globalAlpha = 1;
+
+    // 更新音符
     notes = notes.filter(n => !n.hit && (now - n.targetTime < 200));
     notes.forEach(n => {
         const timeDiff = n.targetTime - now;
         const y = judgeY - (timeDiff * NOTE_SPEED);
+        const x = startX + n.lane * laneWidth + 10;
         
-        if (y > -20 && y < canvas.height) {
+        if (y > -50 && y < canvas.height) {
+            // 音符發光體
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = COLORS[n.lane];
             ctx.fillStyle = COLORS[n.lane];
-            ctx.fillRect(startX + n.lane * laneWidth + 10, y - 10, laneWidth - 20, 15);
+            
+            // 繪製圓角矩形音符
+            const w = laneWidth - 20;
+            const h = 15;
+            ctx.beginPath();
+            ctx.roundRect(x, y - h/2, w, h, 5);
+            ctx.fill();
+            ctx.shadowBlur = 0;
         }
 
-        if (timeDiff < -150) { 
+        if (timeDiff < -150 && !n.hit) { 
             combo = 0; comboEl.innerText = 0; 
-            judgeEl.innerText = "MISS"; judgeEl.style.color = "red";
+            judgeEl.innerText = "MISS"; judgeEl.style.color = "#ff4d4d";
         }
     });
 
@@ -168,16 +236,32 @@ function gameLoop() {
 
 function handleInput(index, isDown) {
     activeKeys[index] = isDown;
-    document.getElementById(`btn-${index}`).classList.toggle('active', isDown);
+    const btn = document.getElementById(`btn-${index}`);
+    btn.classList.toggle('active', isDown);
+    
     if (isDown && isPlaying) {
         const now = performance.now() - startTime;
-        const note = notes.find(n => !n.hit && n.lane === index && Math.abs(n.targetTime - now) < 150);
-        if (note) {
+        const noteIndex = notes.findIndex(n => !n.hit && n.lane === index && Math.abs(n.targetTime - now) < 150);
+        
+        if (noteIndex !== -1) {
+            const note = notes[noteIndex];
             note.hit = true;
             combo++; score += 100;
+            
+            // UI 反饋
             comboEl.innerText = combo;
-            scoreEl.innerText = `SCORE: ${score}`;
-            judgeEl.innerText = "PERFECT"; judgeEl.style.color = "#0ff";
+            comboEl.style.animation = 'none';
+            comboEl.offsetHeight; // 觸發 reflow
+            comboEl.style.animation = 'pulse 0.1s ease-out';
+            
+            scoreEl.innerText = `DATA SYNC: ${score.toLocaleString()}`;
+            judgeEl.innerText = "PERFECT"; 
+            judgeEl.style.color = "#0ff";
+            judgeEl.style.textShadow = "0 0 10px #0ff";
+            
+            // 粒子特效
+            const startX = canvas.width/2 - (laneWidth * 2);
+            createParticles(startX + index * laneWidth + laneWidth/2, judgeY, COLORS[index]);
         }
     }
 }
@@ -190,7 +274,7 @@ LANE_KEYS.forEach((_, i) => {
 });
 window.addEventListener('keydown', (e) => {
     const i = LANE_KEYS.indexOf(e.key.toLowerCase());
-    if(i !== -1) handleInput(i, true);
+    if(i !== -1 && !activeKeys[i]) handleInput(i, true);
 });
 window.addEventListener('keyup', (e) => {
     const i = LANE_KEYS.indexOf(e.key.toLowerCase());
