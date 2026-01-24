@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>Neon Beat - Waveform Master V3</title>
+    <style>
+        body { 
+            background: #121212; color: #e0e0e0; font-family: 'Segoe UI', monospace; 
+            display: flex; flex-direction: column; height: 100vh; margin: 0; overflow: hidden;
+        }
+
+        /* 頂部工具列 */
+        #toolbar {
+            background: #1e1e1e; padding: 10px 20px; border-bottom: 1px solid #333;
+            display: flex; gap: 15px; align-items: center; justify-content: space-between;
+            z-index: 20; box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        
+        .control-group { display: flex; align-items: center; gap: 10px; }
+        
+        button {
+            background: #333; border: 1px solid #555; color: #fff; 
+            padding: 6px 12px; border-radius: 4px; cursor: pointer; transition: 0.2s;
+            font-size: 13px;
+        }
+        button:hover { background: #444; border-color: #888; }
+        button.primary { background: #00bcd4; color: #000; border: none; font-weight: bold; }
+        button.primary:hover { background: #00acc1; }
+        button.active { background: #4caf50; border-color: #4caf50; }
+
+        /* 進度條與時間 */
+        #transport-bar {
+            background: #252525; padding: 5px 20px; display: flex; align-items: center; gap: 15px;
+            border-bottom: 1px solid #333;
+        }
+        #seek-slider { flex: 1; cursor: pointer; height: 5px; accent-color: #00bcd4; }
+        #time-display { color: #00bcd4; font-size: 14px; min-width: 80px; text-align: right; }
+
+        /* 主編輯區 */
+        #viewport {
+            position: relative; flex: 1; background: #000; overflow: hidden;
+        }
+        canvas { display: block; width: 100%; height: 100%; }
+
+        /* 中心線 (Playhead) */
+        #playhead {
+            position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; 
+            background: rgba(255, 50, 50, 0.8); pointer-events: none; z-index: 10;
+            box-shadow: 0 0 8px rgba(255, 0, 0, 0.5);
+        }
+
+        /* 軌道標記 */
+        .lane-guide {
+            position: absolute; left: 0; right: 0; border-bottom: 1px solid rgba(255,255,255,0.05);
+            pointer-events: none;
+        }
+        .lane-text {
+            position: absolute; left: 10px; color: rgba(255,255,255,0.3); 
+            font-size: 20px; font-weight: bold; pointer-events: none; z-index: 5;
+            display: flex; align-items: center; height: 100%;
+        }
+
+        /* 檔案遮罩 */
+        #overlay {
+            position: absolute; inset: 0; background: rgba(0,0,0,0.95); z-index: 100;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        #loading-box { display: none; text-align: center; }
+        .spinner {
+            width: 50px; height: 50px; border: 5px solid #333; border-top-color: #00bcd4;
+            border-radius: 50%; animation: spin 1s infinite linear; margin: 0 auto 20px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* 輸出面板 */
+        #export-modal {
+            position: absolute; bottom: 0; right: 0; width: 300px; height: 200px;
+            background: #1e1e1e; border: 1px solid #333; z-index: 50;
+            display: none; flex-direction: column; padding: 10px;
+            box-shadow: -5px -5px 20px rgba(0,0,0,0.5);
+        }
+        textarea { flex: 1; background: #111; color: #0f0; border: 1px solid #333; resize: none; font-size: 11px; }
+
+        /* 狀態列 */
+        #status-bar {
+            position: absolute; bottom: 10px; left: 10px; font-size: 12px; color: #666; pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+<div id="overlay">
+    <div id="init-box">
+        <h1 style="color:#fff; margin-bottom:10px;">NEON MAKER <span style="color:#00bcd4; font-size:16px;">V3</span></h1>
+        <p style="color:#888; margin-bottom:30px;">高對比波形視覺化編輯器</p>
+        <button class="primary" style="padding:15px 40px; font-size:18px;" onclick="document.getElementById('file-input').click()">📂 選擇 MP3 音樂</button>
+        <input type="file" id="file-input" accept="audio/*" onchange="loadAudio(this)" style="display:none;">
+    </div>
+    <div id="loading-box">
+        <div class="spinner"></div>
+        <div id="loading-msg" style="color:#fff; font-size:18px;">正在解析波形...</div>
+    </div>
+</div>
+
+<div id="toolbar">
+    <div class="control-group">
+        <strong style="color:#00bcd4;">EDITOR</strong>
+        <button onclick="zoom(-500)">🔍 縮小</button>
+        <button onclick="zoom(500)">🔍 放大</button>
+    </div>
+    <div class="control-group">
+        <span>速度:</span>
+        <button onclick="setSpeed(0.5)">0.5x</button>
+        <button onclick="setSpeed(1.0)" class="active" id="btn-speed-1">1.0x</button>
+    </div>
+    <div class="control-group">
+        <button onclick="toggleExport()">💾 匯出數據</button>
+    </div>
+</div>
+
+<div id="transport-bar">
+    <button onclick="togglePlay()" id="play-btn" style="width:80px;">▶ 播放</button>
+    <button onclick="stop()">■ 停止</button>
+    <input type="range" id="seek-slider" value="0" step="0.001">
+    <span id="time-display">00:00.00</span>
+</div>
+
+<div id="viewport">
+    <div id="playhead"></div>
+    <div id="status-bar">準備就緒</div>
+    
+    <div class="lane-guide" style="top:0; height:25%;"><div class="lane-text">D</div></div>
+    <div class="lane-guide" style="top:25%; height:25%;"><div class="lane-text">F</div></div>
+    <div class="lane-guide" style="top:50%; height:25%;"><div class="lane-text">J</div></div>
+    <div class="lane-guide" style="top:75%; height:25%;"><div class="lane-text">K</div></div>
+    
+    <canvas id="canvas"></canvas>
+</div>
+
+<div id="export-modal">
+    <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+        <span>JSON 數據</span>
+        <div>
+            <button onclick="copyJson()" style="padding:2px 8px;">複製</button>
+            <button onclick="toggleExport()" style="padding:2px 8px;">關閉</button>
+        </div>
+    </div>
+    <textarea id="json-text"></textarea>
+</div>
+
+<script>
+    // --- 系統變數 ---
+    const LANE_KEYS = ['d', 'f', 'j', 'k'];
+    const LANE_COLORS = ['#FFD700', '#00BFFF', '#00FF88', '#BD00FF'];
+    let TIME_WINDOW = 3000; // 視窗顯示範圍 (ms)
+    
+    let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    let audioBuffer = null;
+    let sourceNode = null;
+    
+    let isPlaying = false;
+    let startTime = 0;       // 播放開始的 context 時間
+    let pauseOffset = 0;     // 暫停時的進度 (秒)
+    let playbackRate = 1.0;
+
+    let waveform = []; // 儲存波形數據
+    let notes = [];    // 儲存音符 {time, lane}
+
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const slider = document.getElementById('seek-slider');
+    const timeDisp = document.getElementById('time-display');
+    const statusDiv = document.getElementById('status-bar');
+
+    // --- 1. 檔案載入與解析 ---
+    async function loadAudio(input) {
+        if (!input.files.length) return;
+        const file = input.files[0];
+
+        // UI 切換
+        document.getElementById('init-box').style.display = 'none';
+        document.getElementById('loading-box').style.display = 'block';
+
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            // 解碼音訊
+            audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+            
+            // 處理波形
+            generateWaveform();
+            
+            // 完成
+            slider.max = audioBuffer.duration;
+            document.getElementById('overlay').style.display = 'none';
+            resize();
+            draw();
+            statusDiv.innerText = `載入成功: ${audioBuffer.duration.toFixed(1)}秒 | 波形點數: ${waveform.length}`;
+
+        } catch (e) {
+            console.error(e);
+            alert("檔案解析失敗！請確認是正常的 MP3/WAV 檔案。");
+            location.reload();
+        }
+    }
+
+    // --- 2. 波形生成 (V3: 正規化 + 高對比) ---
+    function generateWaveform() {
+        const raw = audioBuffer.getChannelData(0); // 取單聲道
+        const sampleRate = audioBuffer.sampleRate;
+        const samplesPerPixel = 100; // 解析度
+        const step = Math.floor(sampleRate / 100); // 每 10ms 取樣一次
+        
+        waveform = [];
+        let maxVal = 0;
+
+        // 第一遍：取樣並找出最大值 (為了正規化)
+        for (let i = 0; i < raw.length; i += step) {
+            let sum = 0;
+            // 取小區間的絕對值平均
+            for(let j=0; j<step && (i+j)<raw.length; j+=10) {
+                sum += Math.abs(raw[i+j]);
+            }
+            const val = sum / (step/10);
+            if(val > maxVal) maxVal = val;
+            waveform.push(val);
+        }
+
+        // 第二遍：正規化 (讓波形填滿畫面)
+        if(maxVal > 0) {
+            for(let i=0; i<waveform.length; i++) {
+                waveform[i] = waveform[i] / maxVal; 
+            }
+        }
+    }
+
+    // --- 3. 播放引擎 (使用 Web Audio API source node 以獲得最佳同步) ---
+    function play() {
+        if(isPlaying) return;
+        
+        sourceNode = audioCtx.createBufferSource();
+        sourceNode.buffer = audioBuffer;
+        sourceNode.playbackRate.value = playbackRate;
+        sourceNode.connect(audioCtx.destination);
+        
+        startTime = audioCtx.currentTime;
+        sourceNode.start(0, pauseOffset); // 從暫停處開始
+        
+        isPlaying = true;
+        document.getElementById('play-btn').innerText = "⏸ 暫停";
+        animate();
+    }
+
+    function pause() {
+        if(!isPlaying) return;
+        sourceNode.stop();
+        sourceNode = null;
+        // 紀錄暫停位置 = 已經播的時間 * 速度
+        pauseOffset += (audioCtx.currentTime - startTime) * playbackRate;
+        
+        isPlaying = false;
+        document.getElementById('play-btn').innerText = "▶ 播放";
+    }
+
+    function togglePlay() {
+        if(isPlaying) pause(); else play();
+    }
+
+    function stop() {
+        if(isPlaying) {
+            sourceNode.stop();
+            sourceNode = null;
+        }
+        isPlaying = false;
+        pauseOffset = 0;
+        document.getElementById('play-btn').innerText = "▶ 播放";
+        draw();
+        updateUI(0);
+    }
+
+    function setSpeed(rate) {
+        const wasPlaying = isPlaying;
+        if(isPlaying) pause();
+        playbackRate = rate;
+        document.querySelectorAll('#toolbar button').forEach(b => b.classList.remove('active'));
+        if(rate === 1.0) document.getElementById('btn-speed-1').classList.add('active');
+        if(wasPlaying) play();
+    }
+
+    // 拖曳進度條
+    slider.addEventListener('input', (e) => {
+        const wasPlaying = isPlaying;
+        if(isPlaying) pause();
+        pauseOffset = parseFloat(e.target.value);
+        if(wasPlaying) play();
+        else draw();
+        updateUI(pauseOffset);
+    });
+
+    // --- 4. 編輯與互動 ---
+    function resize() {
+        canvas.width = document.getElementById('viewport').clientWidth;
+        canvas.height = document.getElementById('viewport').clientHeight;
+        if(!isPlaying) draw();
+    }
+    window.addEventListener('resize', resize);
+
+    function zoom(delta) {
+        TIME_WINDOW += delta;
+        if(TIME_WINDOW < 1000) TIME_WINDOW = 1000;
+        if(TIME_WINDOW > 10000) TIME_WINDOW = 10000;
+        if(!isPlaying) draw();
+        statusDiv.innerText = `視窗縮放: ${TIME_WINDOW}ms`;
+    }
+
+    // 鍵盤錄製
+    window.addEventListener('keydown', (e) => {
+        if(document.activeElement.tagName === 'TEXTAREA') return;
+        const lane = LANE_KEYS.indexOf(e.key.toLowerCase());
+        if(lane !== -1) {
+            const now = getCurrentTime();
+            // 簡單防抖
+            if(!notes.find(n => n.lane === lane && Math.abs(n.time - now*1000) < 50)) {
+                notes.push({ time: Math.round(now * 1000), lane: lane, hit: false });
+                if(!isPlaying) draw();
+            }
+        }
+        if(e.code === 'Space') { e.preventDefault(); togglePlay(); }
+    });
+
+    // 滑鼠點擊編輯
+    canvas.addEventListener('mousedown', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        const laneH = canvas.height / 4;
+        const lane = Math.floor(y / laneH);
+        
+        // 計算點擊對應的時間
+        const now = getCurrentTime();
+        const widthMs = TIME_WINDOW; // 畫面寬度代表的時間
+        const msPerPx = widthMs / canvas.width;
+        
+        // 畫面中心是 now，點擊處相對於中心的偏移
+        const centerX = canvas.width / 2;
+        const offsetMs = (x - centerX) * msPerPx;
+        const clickTimeMs = (now * 1000) + offsetMs;
+
+        // 搜尋點擊處是否有音符 (誤差 30ms)
+        const hitIdx = notes.findIndex(n => n.lane === lane && Math.abs(n.time - clickTimeMs) < 150); // 加大誤差容許，比較好點
+
+        if(hitIdx !== -1) {
+            notes.splice(hitIdx, 1); // 刪除
+        } else {
+            if(clickTimeMs >= 0) {
+                notes.push({ time: Math.round(clickTimeMs), lane: lane, hit: false }); // 新增
+            }
+        }
+        if(!isPlaying) draw();
+    });
+
+    // --- 5. 繪圖核心 ---
+    function getCurrentTime() {
+        if(isPlaying) {
+            return pauseOffset + (audioCtx.currentTime - startTime) * playbackRate;
+        }
+        return pauseOffset;
+    }
+
+    function animate() {
+        if(!isPlaying) return;
+        draw();
+        
+        const curr = getCurrentTime();
+        updateUI(curr);
+        
+        if(curr >= audioBuffer.duration) stop();
+        else requestAnimationFrame(animate);
+    }
+
+    function updateUI(time) {
+        slider.value = time;
+        const m = Math.floor(time/60).toString().padStart(2,'0');
+        const s = (time%60).toFixed(2).padStart(5,'0');
+        timeDisp.innerText = `${m}:${s}`;
+    }
+
+    function draw() {
+        const w = canvas.width;
+        const h = canvas.height;
+        const nowMs = getCurrentTime() * 1000;
+        
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, w, h);
+
+        // 畫波形 (SoundCloud 風格：鏡像)
+        if(waveform.length > 0) {
+            const startMs = nowMs - (TIME_WINDOW / 2);
+            const endMs = nowMs + (TIME_WINDOW / 2);
+            const msPerPx = TIME_WINDOW / w;
+
+            // 波形數據索引 (每 10ms 一點)
+            const startIdx = Math.floor(startMs / 10);
+            const endIdx = Math.ceil(endMs / 10);
+            
+            ctx.beginPath();
+            ctx.fillStyle = 'rgba(0, 188, 212, 0.3)'; // 青色半透明
+
+            for(let i = startIdx; i < endIdx; i++) {
+                if(i < 0 || i >= waveform.length) continue;
+                
+                const val = waveform[i]; // 0~1 (已正規化)
+                const x = ((i * 10) - startMs) / msPerPx;
+                
+                // 畫 bar
+                // 高度 = val * (h / 2)
+                const barH = val * (h * 0.45); 
+                
+                // 如果是大能量，畫更亮
+                if(val > 0.6) {
+                    ctx.fillStyle = `rgba(0, 255, 255, ${val})`; 
+                } else {
+                    ctx.fillStyle = `rgba(0, 150, 150, 0.4)`;
+                }
+                
+                // 畫上半部
+                ctx.fillRect(x, (h/2) - barH, 2, barH * 2); 
+            }
+        }
+
+        // 畫網格 (Beat Grid)
+        const msPerPx = TIME_WINDOW / w;
+        const startMs = nowMs - (TIME_WINDOW / 2);
+        const endMs = nowMs + (TIME_WINDOW / 2);
+        
+        ctx.fillStyle = '#444';
+        ctx.font = '10px monospace';
+        ctx.textAlign = 'center';
+
+        // 每秒畫一條粗線，每 0.5 秒畫細線
+        const gridStart = Math.floor(startMs / 500) * 500;
+        for(let t = gridStart; t < endMs; t += 500) {
+            const x = (t - startMs) / msPerPx;
+            const isSec = (t % 1000 === 0);
+            
+            ctx.fillStyle = isSec ? '#555' : '#333';
+            ctx.fillRect(x, 0, 1, h);
+            
+            if(isSec) {
+                ctx.fillStyle = '#888';
+                ctx.fillText((t/1000).toFixed(0)+'s', x, h - 5);
+            }
+        }
+
+        // 畫音符
+        const laneH = h / 4;
+        const visibleNotes = notes.filter(n => n.time > startMs - 100 && n.time < endMs + 100);
+        
+        visibleNotes.forEach(n => {
+            const x = (n.time - startMs) / msPerPx;
+            const y = n.lane * laneH;
+            const color = LANE_COLORS[n.lane];
+            
+            // 方塊本體
+            ctx.fillStyle = color;
+            ctx.shadowBlur = 10; ctx.shadowColor = color;
+            // 寬度稍微寬一點好點選
+            ctx.fillRect(x - 3, y + 2, 6, laneH - 4);
+            
+            ctx.shadowBlur = 0;
+            ctx.strokeStyle = '#fff';
+            ctx.strokeRect(x - 3, y + 2, 6, laneH - 4);
+        });
+        
+        // 軌道橫線
+        for(let i=1; i<4; i++) {
+            ctx.fillStyle = '#333';
+            ctx.fillRect(0, i*laneH, w, 1);
+        }
+    }
+
+    // --- 匯出 ---
+    function toggleExport() {
+        const modal = document.getElementById('export-modal');
+        if(modal.style.display === 'flex') modal.style.display = 'none';
+        else {
+            modal.style.display = 'flex';
+            notes.sort((a,b) => a.time - b.time);
+            document.getElementById('json-text').value = JSON.stringify(notes);
+        }
+    }
+    function copyJson() {
+        document.getElementById('json-text').select();
+        document.execCommand('copy');
+        alert("複製成功！請貼上到遊戲中。");
+    }
+
+</script>
+</body>
+</html>
