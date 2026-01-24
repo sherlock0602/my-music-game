@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Neon Beat - Pro Sync</title>
+    <title>Neon Beat - Manual Chart</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
-
         * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; user-select: none; touch-action: none; box-sizing: border-box; outline: none; }
         body { 
             margin: 0; background: #000; color: #fff; overflow: hidden; 
@@ -14,76 +13,38 @@
             width: 100vw; height: 100vh;
             display: flex; justify-content: center;
         }
-
         #game-container {
             position: relative; width: 100%; max-width: 800px; height: 100%;
             background: linear-gradient(to bottom, #050510 0%, #101020 100%);
             overflow: hidden; box-shadow: 0 0 100px rgba(0,0,0,1);
         }
-
-        /* --- UI 層 --- */
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
-        
-        .hud-top {
-            display: flex; justify-content: space-between; padding: 20px;
-            text-shadow: 0 0 10px #0ff;
-        }
+        .hud-top { display: flex; justify-content: space-between; padding: 20px; text-shadow: 0 0 10px #0ff; }
         .hud-val { font-size: 24px; font-weight: 700; color: #fff; }
         .hud-lbl { font-size: 10px; color: #0ff; opacity: 0.7; letter-spacing: 1px; }
-
         #center-hud { position: absolute; top: 18%; width: 100%; text-align: center; }
-        #combo-num { 
-            font-size: 90px; font-weight: 900; margin: 0; color: #fff; 
-            text-shadow: 0 0 30px rgba(0,255,255,0.5); font-style: italic;
-            transform: scale(1); transition: transform 0.05s;
-        }
-        #judgement { 
-            font-size: 36px; font-weight: 900; letter-spacing: 3px; opacity: 0; 
-            text-shadow: 0 0 20px currentColor; margin-top: 5px;
-        }
-
-        /* --- 校準滑桿 (關鍵新功能) --- */
-        #offset-controls {
-            position: absolute; bottom: 35%; width: 100%; text-align: center; pointer-events: auto; z-index: 50;
-            display: flex; flex-direction: column; align-items: center; opacity: 0.8;
-        }
-        #offset-label { font-size: 12px; color: #aaa; margin-bottom: 5px; text-shadow: 0 0 5px #000; }
-        input[type=range] {
-            width: 60%; accent-color: #0ff; cursor: pointer; height: 5px;
-        }
-
-        /* --- 載入層 --- */
-        #loader {
-            position: absolute; inset: 0; z-index: 100; background: #000;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-        }
-        #status-text { margin-top: 20px; color: #0ff; font-size: 12px; animation: blink 1s infinite; }
-        @keyframes blink { 50% { opacity: 0.5; } }
+        #combo-num { font-size: 90px; font-weight: 900; margin: 0; color: #fff; text-shadow: 0 0 30px rgba(0,255,255,0.5); font-style: italic; transform: scale(1); transition: transform 0.05s; }
+        #judgement { font-size: 36px; font-weight: 900; letter-spacing: 3px; opacity: 0; text-shadow: 0 0 20px currentColor; margin-top: 5px; }
         
-        #start-btn {
-            margin-top: 30px; padding: 15px 50px; font-size: 20px;
-            background: #0ff; color: #000; border: none; font-weight: 900;
-            box-shadow: 0 0 30px #0ff; cursor: pointer; display: none;
-            clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
-        }
+        #offset-controls { position: absolute; bottom: 35%; width: 100%; text-align: center; pointer-events: auto; z-index: 50; display: flex; flex-direction: column; align-items: center; opacity: 0.8; }
+        #offset-label { font-size: 12px; color: #aaa; margin-bottom: 5px; text-shadow: 0 0 5px #000; }
+        input[type=range] { width: 60%; accent-color: #0ff; cursor: pointer; height: 5px; }
 
-        /* --- 觸控層 --- */
-        #touch-layer {
-            position: absolute; bottom: 0; left: 0; width: 100%; height: 25%;
-            z-index: 20; display: flex;
-        }
-        .touch-zone { flex: 1; height: 100%; /* border: 1px dashed rgba(255,255,255,0.1); */ }
+        #start-screen { position: absolute; inset: 0; z-index: 100; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        #start-btn { margin-top: 30px; padding: 15px 50px; font-size: 20px; background: #0ff; color: #000; border: none; font-weight: 900; box-shadow: 0 0 30px #0ff; cursor: pointer; }
 
+        #touch-layer { position: absolute; bottom: 0; left: 0; width: 100%; height: 25%; z-index: 20; display: flex; }
+        .touch-zone { flex: 1; height: 100%; }
         canvas { display: block; position: absolute; inset: 0; z-index: 5; }
     </style>
 </head>
 <body>
 
 <div id="game-container">
-    <div id="loader">
+    <div id="start-screen">
         <h1 style="font-size: 40px; text-shadow: 0 0 30px #0ff;">NEON SYNC</h1>
-        <div id="status-text">INITIALIZING AUDIO ENGINE...</div>
-        <button id="start-btn" onclick="startGame()">START SYSTEM</button>
+        <p style="color: #888; font-size: 12px;">MANUAL CHART EDITION</p>
+        <button id="start-btn" onclick="startGame()">START GAME</button>
     </div>
 
     <div id="ui-layer">
@@ -97,10 +58,7 @@
         </div>
     </div>
 
-    <div id="offset-controls">
-        <div id="offset-label">LAG FIX: 0ms (Drag if off-sync)</div>
-        <input type="range" id="offset-slider" min="-300" max="300" step="10" value="0">
-    </div>
+
 
     <canvas id="gameCanvas"></canvas>
 
@@ -113,57 +71,46 @@
 </div>
 
 <script>
-// --- 設定區 ---
+// ==========================================
+// ▼▼▼ 把你在 maker.html 複製的數據貼在這裡 ▼▼▼
+// ==========================================
+const CHART_DATA = [
+    // 範例格式: { "time": 1200, "lane": 0, "hit": false },
+    // 這裡若是空的，請貼上你的 JSON
+{"time":769,"lane":0,"hit":false},{"time":1080,"lane":1,"hit":false},{"time":1384,"lane":0,"hit":false},{"time":1715,"lane":2,"hit":false},{"time":1895,"lane":1,"hit":false},{"time":2280,"lane":3,"hit":false},{"time":2449,"lane":0,"hit":false},{"time":2620,"lane":0,"hit":false},{"time":3135,"lane":2,"hit":false},{"time":3660,"lane":1,"hit":false},{"time":4186,"lane":2,"hit":false},{"time":4342,"lane":3,"hit":false},{"time":4895,"lane":2,"hit":false},{"time":5497,"lane":0,"hit":false},{"time":5722,"lane":2,"hit":false},{"time":6152,"lane":1,"hit":false},{"time":6272,"lane":2,"hit":false},{"time":6442,"lane":0,"hit":false},{"time":6956,"lane":2,"hit":false},{"time":7132,"lane":0,"hit":false},{"time":7446,"lane":1,"hit":false},{"time":7807,"lane":2,"hit":false},{"time":7906,"lane":3,"hit":false},{"time":8336,"lane":2,"hit":false},{"time":9267,"lane":2,"hit":false},{"time":9515,"lane":1,"hit":false},{"time":9953,"lane":2,"hit":false},{"time":10636,"lane":2,"hit":false},{"time":11132,"lane":3,"hit":false},{"time":11596,"lane":3,"hit":false},{"time":11850,"lane":1,"hit":false},{"time":12327,"lane":3,"hit":false},{"time":12540,"lane":0,"hit":false},{"time":12992,"lane":2,"hit":false},{"time":13203,"lane":1,"hit":false},{"time":13527,"lane":2,"hit":false},{"time":13677,"lane":0,"hit":false},{"time":14184,"lane":3,"hit":false},{"time":14396,"lane":2,"hit":false},{"time":14833,"lane":1,"hit":false},{"time":15072,"lane":2,"hit":false},{"time":15289,"lane":1,"hit":false},{"time":15536,"lane":0,"hit":false},{"time":16012,"lane":1,"hit":false},{"time":16227,"lane":1,"hit":false},{"time":16516,"lane":2,"hit":false},{"time":16703,"lane":1,"hit":false},{"time":16936,"lane":0,"hit":false},{"time":17387,"lane":1,"hit":false},{"time":17607,"lane":0,"hit":false},{"time":18080,"lane":2,"hit":false},{"time":18562,"lane":1,"hit":false},{"time":18567,"lane":2,"hit":false},{"time":18994,"lane":0,"hit":false},{"time":19246,"lane":3,"hit":false},{"time":19732,"lane":2,"hit":false},{"time":19736,"lane":1,"hit":false},{"time":19959,"lane":0,"hit":false},{"time":20412,"lane":3,"hit":false},{"time":20632,"lane":1,"hit":false},{"time":21112,"lane":0,"hit":false},{"time":21792,"lane":1,"hit":false},{"time":21998,"lane":2,"hit":false},{"time":22296,"lane":1,"hit":false},{"time":22682,"lane":0,"hit":false},{"time":23153,"lane":1,"hit":false},{"time":23462,"lane":3,"hit":false},{"time":23664,"lane":3,"hit":false},{"time":24093,"lane":1,"hit":false},{"time":24327,"lane":2,"hit":false},{"time":25042,"lane":2,"hit":false},{"time":25047,"lane":1,"hit":false},{"time":25441,"lane":0,"hit":false},{"time":25444,"lane":3,"hit":false},{"time":25967,"lane":0,"hit":false},{"time":25972,"lane":3,"hit":false},{"time":26165,"lane":1,"hit":false},{"time":26169,"lane":2,"hit":false},{"time":26376,"lane":1,"hit":false},{"time":26376,"lane":2,"hit":false},{"time":26628,"lane":0,"hit":false},{"time":27064,"lane":1,"hit":false},{"time":27298,"lane":2,"hit":false},{"time":27737,"lane":0,"hit":false},{"time":27981,"lane":1,"hit":false},{"time":28211,"lane":2,"hit":false},{"time":28459,"lane":3,"hit":false},{"time":28873,"lane":1,"hit":false},{"time":29115,"lane":2,"hit":false},{"time":29568,"lane":0,"hit":false},{"time":29572,"lane":3,"hit":false},{"time":30034,"lane":3,"hit":false},{"time":30518,"lane":1,"hit":false},{"time":30776,"lane":2,"hit":false},{"time":31015,"lane":1,"hit":false},{"time":31248,"lane":2,"hit":false},{"time":31503,"lane":1,"hit":false},{"time":31758,"lane":2,"hit":false},{"time":31943,"lane":1,"hit":false},{"time":32165,"lane":2,"hit":false},{"time":32402,"lane":1,"hit":false},{"time":32854,"lane":1,"hit":false},{"time":33332,"lane":0,"hit":false},{"time":33812,"lane":0,"hit":false},{"time":34066,"lane":3,"hit":false},{"time":34536,"lane":3,"hit":false},{"time":35199,"lane":1,"hit":false},{"time":35434,"lane":2,"hit":false},{"time":35667,"lane":1,"hit":false},{"time":35907,"lane":2,"hit":false},{"time":36179,"lane":0,"hit":false},{"time":36588,"lane":1,"hit":false},{"time":36827,"lane":0,"hit":false},{"time":37077,"lane":3,"hit":false},{"time":37558,"lane":3,"hit":false},{"time":38039,"lane":2,"hit":false},{"time":38708,"lane":2,"hit":false},{"time":38711,"lane":1,"hit":false},{"time":39599,"lane":3,"hit":false},{"time":39842,"lane":2,"hit":false},{"time":40279,"lane":3,"hit":false},{"time":40779,"lane":3,"hit":false},{"time":41248,"lane":2,"hit":false},{"time":41491,"lane":2,"hit":false},{"time":41943,"lane":1,"hit":false},{"time":42394,"lane":2,"hit":false},{"time":42875,"lane":1,"hit":false},{"time":43168,"lane":2,"hit":false},{"time":43820,"lane":1,"hit":false},{"time":43827,"lane":2,"hit":false},{"time":44488,"lane":3,"hit":false},{"time":44737,"lane":0,"hit":false},{"time":44966,"lane":0,"hit":false},{"time":45194,"lane":2,"hit":false},{"time":45666,"lane":1,"hit":false},{"time":46139,"lane":0,"hit":false},{"time":46367,"lane":1,"hit":false},{"time":46614,"lane":1,"hit":false},{"time":47046,"lane":2,"hit":false},{"time":47279,"lane":0,"hit":false},{"time":47774,"lane":1,"hit":false},{"time":48219,"lane":2,"hit":false},{"time":48703,"lane":0,"hit":false},{"time":48939,"lane":3,"hit":false},{"time":49398,"lane":2,"hit":false},{"time":49634,"lane":1,"hit":false},{"time":49879,"lane":2,"hit":false},{"time":50079,"lane":3,"hit":false},{"time":50279,"lane":0,"hit":false},{"time":50643,"lane":2,"hit":false},{"time":50899,"lane":0,"hit":false},{"time":51394,"lane":2,"hit":false},{"time":51714,"lane":1,"hit":false},{"time":51983,"lane":3,"hit":false},{"time":52379,"lane":3,"hit":false},{"time":52779,"lane":3,"hit":false},{"time":53082,"lane":1,"hit":false},{"time":53086,"lane":2,"hit":false},{"time":53291,"lane":1,"hit":false},{"time":53294,"lane":2,"hit":false},{"time":53729,"lane":0,"hit":false},{"time":53976,"lane":1,"hit":false},{"time":54202,"lane":2,"hit":false},{"time":54449,"lane":2,"hit":false},{"time":54658,"lane":1,"hit":false},{"time":55103,"lane":0,"hit":false},{"time":55594,"lane":0,"hit":false},{"time":55774,"lane":2,"hit":false},{"time":56003,"lane":3,"hit":false},{"time":56228,"lane":1,"hit":false},{"time":56748,"lane":2,"hit":false},{"time":56928,"lane":3,"hit":false},{"time":57423,"lane":1,"hit":false},{"time":57588,"lane":2,"hit":false},{"time":57834,"lane":0,"hit":false},{"time":58058,"lane":3,"hit":false},{"time":58558,"lane":2,"hit":false},{"time":58738,"lane":1,"hit":false},{"time":59188,"lane":0,"hit":false},{"time":59194,"lane":1,"hit":false},{"time":59194,"lane":3,"hit":false},{"time":59198,"lane":2,"hit":false},{"time":59694,"lane":3,"hit":false},{"time":60083,"lane":0,"hit":false},{"time":61214,"lane":0,"hit":false},{"time":61894,"lane":0,"hit":false},{"time":62118,"lane":1,"hit":false},{"time":62538,"lane":2,"hit":false},{"time":63094,"lane":2,"hit":false},{"time":63548,"lane":3,"hit":false},{"time":64014,"lane":0,"hit":false},{"time":64483,"lane":2,"hit":false},{"time":64974,"lane":1,"hit":false},{"time":65188,"lane":2,"hit":false},{"time":65394,"lane":3,"hit":false},{"time":65614,"lane":0,"hit":false},{"time":65814,"lane":2,"hit":false},{"time":66018,"lane":3,"hit":false},{"time":66238,"lane":1,"hit":false},{"time":66454,"lane":0,"hit":false},{"time":66734,"lane":2,"hit":false},{"time":66743,"lane":1,"hit":false},{"time":67548,"lane":0,"hit":false},{"time":67554,"lane":3,"hit":false},{"time":68714,"lane":2,"hit":false},{"time":68878,"lane":1,"hit":false},{"time":69408,"lane":2,"hit":false},{"time":69583,"lane":1,"hit":false},{"time":69834,"lane":0,"hit":false},{"time":70068,"lane":3,"hit":false},{"time":70558,"lane":2,"hit":false},{"time":70788,"lane":0,"hit":false},{"time":71214,"lane":2,"hit":false},{"time":71418,"lane":1,"hit":false},{"time":71628,"lane":3,"hit":false},{"time":71898,"lane":0,"hit":false},{"time":72434,"lane":1,"hit":false},{"time":72448,"lane":2,"hit":false},{"time":72638,"lane":0,"hit":false},{"time":73083,"lane":3,"hit":false},{"time":73308,"lane":1,"hit":false},{"time":73778,"lane":2,"hit":false},{"time":73978,"lane":1,"hit":false},{"time":74314,"lane":0,"hit":false},{"time":74694,"lane":0,"hit":false},{"time":75123,"lane":0,"hit":false},{"time":75383,"lane":3,"hit":false},{"time":75594,"lane":1,"hit":false},{"time":75838,"lane":2,"hit":false},{"time":76083,"lane":0,"hit":false},{"time":76308,"lane":3,"hit":false},{"time":76534,"lane":1,"hit":false},{"time":76778,"lane":2,"hit":false},{"time":77188,"lane":0,"hit":false},{"time":77418,"lane":2,"hit":false},{"time":77658,"lane":1,"hit":false},{"time":77908,"lane":3,"hit":false},{"time":78374,"lane":0,"hit":false},{"time":78563,"lane":2,"hit":false},{"time":79078,"lane":1,"hit":false},{"time":79258,"lane":3,"hit":false},{"time":79498,"lane":0,"hit":false},{"time":79814,"lane":1,"hit":false},{"time":80158,"lane":2,"hit":false},{"time":80678,"lane":3,"hit":false},{"time":80688,"lane":0,"hit":false},{"time":81154,"lane":1,"hit":false},{"time":81158,"lane":2,"hit":false},{"time":81623,"lane":3,"hit":false},{"time":82074,"lane":3,"hit":false},{"time":82554,"lane":0,"hit":false},{"time":82563,"lane":3,"hit":false},{"time":83008,"lane":0,"hit":false},{"time":83008,"lane":3,"hit":false},{"time":83518,"lane":1,"hit":false},{"time":83534,"lane":2,"hit":false},{"time":83703,"lane":0,"hit":false},{"time":83714,"lane":3,"hit":false},{"time":84074,"lane":2,"hit":false},{"time":84328,"lane":1,"hit":false},{"time":84563,"lane":3,"hit":false},{"time":84803,"lane":0,"hit":false},{"time":85254,"lane":2,"hit":false},{"time":85454,"lane":1,"hit":false},{"time":85954,"lane":2,"hit":false},{"time":86203,"lane":2,"hit":false},{"time":86454,"lane":2,"hit":false},{"time":86643,"lane":2,"hit":false},{"time":87078,"lane":0,"hit":false},{"time":87298,"lane":0,"hit":false},{"time":87674,"lane":0,"hit":false},{"time":87954,"lane":3,"hit":false},{"time":88383,"lane":3,"hit":false},{"time":88618,"lane":1,"hit":false},{"time":88948,"lane":3,"hit":false},{"time":89378,"lane":0,"hit":false},{"time":89778,"lane":2,"hit":false},{"time":90023,"lane":1,"hit":false},{"time":90383,"lane":3,"hit":false},{"time":90548,"lane":0,"hit":false},{"time":90734,"lane":2,"hit":false},{"time":90903,"lane":1,"hit":false},{"time":91134,"lane":3,"hit":false},{"time":91343,"lane":0,"hit":false},{"time":92174,"lane":0,"hit":false},{"time":92543,"lane":1,"hit":false},{"time":93014,"lane":2,"hit":false},{"time":93018,"lane":1,"hit":false},{"time":93218,"lane":0,"hit":false},{"time":93894,"lane":2,"hit":false},{"time":93898,"lane":1,"hit":false},{"time":94408,"lane":3,"hit":false},{"time":94634,"lane":3,"hit":false},{"time":95034,"lane":3,"hit":false},{"time":95294,"lane":0,"hit":false},{"time":95734,"lane":1,"hit":false},{"time":96194,"lane":3,"hit":false},{"time":96623,"lane":2,"hit":false},{"time":96628,"lane":0,"hit":false},{"time":97094,"lane":3,"hit":false},{"time":97098,"lane":1,"hit":false},{"time":97508,"lane":2,"hit":false},{"time":97683,"lane":0,"hit":false},{"time":97868,"lane":3,"hit":false},{"time":98088,"lane":1,"hit":false},{"time":98298,"lane":2,"hit":false},{"time":98508,"lane":3,"hit":false},{"time":98734,"lane":0,"hit":false},{"time":99448,"lane":0,"hit":false},{"time":99898,"lane":1,"hit":false},{"time":100374,"lane":2,"hit":false},{"time":100568,"lane":3,"hit":false},{"time":101068,"lane":1,"hit":false},{"time":101354,"lane":3,"hit":false},{"time":101754,"lane":0,"hit":false},{"time":102148,"lane":2,"hit":false},{"time":102348,"lane":1,"hit":false},{"time":102874,"lane":3,"hit":false},{"time":103088,"lane":3,"hit":false},{"time":103323,"lane":3,"hit":false},{"time":103614,"lane":3,"hit":false},{"time":104414,"lane":3,"hit":false},{"time":104428,"lane":0,"hit":false},{"time":105534,"lane":1,"hit":false},{"time":105854,"lane":1,"hit":false},{"time":106223,"lane":1,"hit":false},{"time":106518,"lane":2,"hit":false},{"time":106994,"lane":2,"hit":false},{"time":107614,"lane":2,"hit":false},{"time":109645,"lane":1,"hit":false},{"time":110004,"lane":2,"hit":false},{"time":110300,"lane":3,"hit":false},{"time":110738,"lane":0,"hit":false},{"time":110947,"lane":1,"hit":false},{"time":111398,"lane":2,"hit":false},{"time":111603,"lane":3,"hit":false},{"time":112067,"lane":1,"hit":false},{"time":112578,"lane":2,"hit":false},{"time":113027,"lane":3,"hit":false},{"time":113260,"lane":0,"hit":false},{"time":113752,"lane":1,"hit":false},{"time":114023,"lane":2,"hit":false},{"time":114238,"lane":3,"hit":false},{"time":114487,"lane":0,"hit":false},{"time":114712,"lane":2,"hit":false},{"time":115143,"lane":0,"hit":false},{"time":115343,"lane":3,"hit":false},{"time":115823,"lane":1,"hit":false},{"time":116052,"lane":2,"hit":false},{"time":116303,"lane":3,"hit":false},{"time":116772,"lane":0,"hit":false},{"time":117243,"lane":2,"hit":false},{"time":117503,"lane":0,"hit":false},{"time":117712,"lane":3,"hit":false},{"time":117923,"lane":1,"hit":false},{"time":118192,"lane":2,"hit":false},{"time":118383,"lane":0,"hit":false},{"time":118832,"lane":3,"hit":false},{"time":119052,"lane":0,"hit":false},{"time":119567,"lane":2,"hit":false},{"time":120063,"lane":1,"hit":false},{"time":120503,"lane":3,"hit":false},{"time":120703,"lane":0,"hit":false},{"time":121243,"lane":2,"hit":false},{"time":121403,"lane":1,"hit":false},{"time":121678,"lane":0,"hit":false},{"time":121932,"lane":3,"hit":false},{"time":122107,"lane":1,"hit":false},{"time":122432,"lane":2,"hit":false},{"time":122587,"lane":0,"hit":false},{"time":123112,"lane":3,"hit":false},{"time":123307,"lane":1,"hit":false},{"time":123807,"lane":3,"hit":false},{"time":123983,"lane":0,"hit":false},{"time":124303,"lane":2,"hit":false},{"time":124463,"lane":1,"hit":false},{"time":124978,"lane":0,"hit":false},{"time":125167,"lane":3,"hit":false},{"time":125387,"lane":1,"hit":false},{"time":125663,"lane":2,"hit":false},{"time":125863,"lane":0,"hit":false},{"time":126283,"lane":3,"hit":false},{"time":126568,"lane":0,"hit":false},{"time":127007,"lane":2,"hit":false},{"time":127507,"lane":0,"hit":false},{"time":128012,"lane":2,"hit":false},{"time":128023,"lane":1,"hit":false},{"time":128243,"lane":0,"hit":false},{"time":128258,"lane":3,"hit":false},{"time":128732,"lane":2,"hit":false},{"time":128898,"lane":1,"hit":false},{"time":129127,"lane":3,"hit":false},{"time":129363,"lane":0,"hit":false},{"time":129583,"lane":1,"hit":false},{"time":129835,"lane":2,"hit":false},{"time":130046,"lane":1,"hit":false},{"time":130223,"lane":3,"hit":false},{"time":130692,"lane":0,"hit":false},{"time":130938,"lane":1,"hit":false},{"time":131172,"lane":2,"hit":false},{"time":131618,"lane":3,"hit":false},{"time":132018,"lane":0,"hit":false},{"time":132366,"lane":1,"hit":false},{"time":132563,"lane":2,"hit":false},{"time":132832,"lane":3,"hit":false},{"time":133058,"lane":0,"hit":false},{"time":133238,"lane":3,"hit":false},{"time":133672,"lane":1,"hit":false},{"time":133892,"lane":2,"hit":false},{"time":134332,"lane":0,"hit":false},{"time":134807,"lane":2,"hit":false},{"time":135023,"lane":3,"hit":false},{"time":135272,"lane":0,"hit":false},{"time":135523,"lane":2,"hit":false},{"time":136007,"lane":0,"hit":false},{"time":136203,"lane":1,"hit":false},{"time":136643,"lane":2,"hit":false},{"time":136838,"lane":3,"hit":false},{"time":137118,"lane":0,"hit":false},{"time":137343,"lane":2,"hit":false},{"time":137743,"lane":1,"hit":false},{"time":138003,"lane":0,"hit":false},{"time":138463,"lane":3,"hit":false},{"time":138943,"lane":1,"hit":false},{"time":139407,"lane":2,"hit":false},{"time":139727,"lane":1,"hit":false},{"time":139729,"lane":2,"hit":false},{"time":140018,"lane":0,"hit":false},{"time":140203,"lane":3,"hit":false},{"time":140427,"lane":1,"hit":false},{"time":140647,"lane":3,"hit":false},{"time":141103,"lane":3,"hit":false},{"time":141341,"lane":0,"hit":false},{"time":141743,"lane":2,"hit":false},{"time":141767,"lane":1,"hit":false},{"time":142198,"lane":3,"hit":false},{"time":142443,"lane":0,"hit":false},{"time":142703,"lane":2,"hit":false},{"time":142918,"lane":1,"hit":false},{"time":143418,"lane":3,"hit":false},{"time":143583,"lane":0,"hit":false},{"time":144043,"lane":0,"hit":false},{"time":144267,"lane":1,"hit":false},{"time":144518,"lane":2,"hit":false},{"time":144738,"lane":3,"hit":false},{"time":145223,"lane":3,"hit":false},{"time":145427,"lane":2,"hit":false},{"time":145877,"lane":1,"hit":false},{"time":146227,"lane":0,"hit":false},{"time":146818,"lane":3,"hit":false},{"time":146823,"lane":0,"hit":false},{"time":147338,"lane":0,"hit":false},{"time":147843,"lane":3,"hit":false}
+
+
+
+
+];
+// ==========================================
+
 const MUSIC_URL = 'music.mp3';
-const LEAD_TIME = 1300; // 音符飛行時間 (固定)
-const LANE_COLORS = ['#FFD700', '#00BFFF', '#00FF88', '#BD00FF']; // 黃, 藍, 綠, 紫
+const LEAD_TIME = 1300; 
+const LANE_COLORS = ['#FFD700', '#00BFFF', '#00FF88', '#BD00FF'];
 const LANE_KEYS = ['D', 'F', 'J', 'K'];
 
-// --- 系統變數 ---
+// 3D 參數
+const HIT_Y = 0.75; 
+const VANISH_Y = 0.25; 
+const BTN_Y = 0.92;
+
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-let userOffset = 0; // 用戶手動校準值
+let userOffset = 0;
 
-// 3D 軌道參數
-const HIT_Y = 0.75; // 判定線位置
-const VANISH_Y = 0.25; // 消失點
-const BTN_Y = 0.92; // 按鈕位置
-
-let audioCtx, audioBuffer, audioSource;
-let isPlaying = false, startTime = 0;
-let generatedNotes = [], activeNotes = [];
+let audio = new Audio(MUSIC_URL);
+let isPlaying = false;
+let activeNotes = [];
 let combo = 0, score = 0;
 let activeKeys = [false, false, false, false];
 let particles = [], stars = [];
 
-// --- 初始化 ---
-window.onload = async function() {
+// 初始化
+window.onload = () => {
     resize();
     window.addEventListener('resize', resize);
     initStars();
-
-    // 綁定滑桿事件
-    const slider = document.getElementById('offset-slider');
-    const label = document.getElementById('offset-label');
-    slider.addEventListener('input', (e) => {
-        userOffset = parseInt(e.target.value);
-        label.innerText = `LAG FIX: ${userOffset > 0 ? '+' : ''}${userOffset}ms`;
-    });
-
-    try {
-        const response = await fetch(MUSIC_URL);
-        const arrayBuffer = await response.arrayBuffer();
-        document.getElementById('status-text').innerText = "ANALYZING BASS FREQUENCIES...";
-        
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        audioCtx.decodeAudioData(arrayBuffer, (buffer) => {
-            audioBuffer = buffer;
-            analyzeBeats(buffer); // 使用新的分析算法
-        });
-    } catch (err) {
-        document.getElementById('status-text').innerText = "ERROR: music.mp3 NOT FOUND";
-        document.getElementById('status-text').style.color = "red";
-    }
 };
 
 function resize() {
@@ -172,103 +119,35 @@ function resize() {
     canvas.height = rect.height;
 }
 
-// --- 新版節拍分析 (動態門檻 + 低通濾波模擬) ---
-function analyzeBeats(buffer) {
-    const rawData = buffer.getChannelData(0);
-    const sampleRate = buffer.sampleRate;
-    
-    // 為了效能，我們把採樣率降低 (Downsampling)
-    // 我們只關心低頻能量，這可以通過簡單的移動平均來模擬低通濾波
-    const step = Math.floor(sampleRate / 100); // 10ms 一個採樣點
-    const winSize = step * 5; // 窗口大小
-    
-    generatedNotes = [];
-    let localEnergies = [];
-    
-    // 1. 計算能量圖譜
-    for (let i = 0; i < rawData.length; i += step) {
-        let sum = 0;
-        // 取一小段計算 RMS (Root Mean Square) 能量
-        for (let j = 0; j < winSize && (i+j) < rawData.length; j++) {
-            sum += rawData[i+j] * rawData[i+j];
-        }
-        localEnergies.push(Math.sqrt(sum / winSize));
-    }
-
-    // 2. 動態門檻偵測
-    // 我們比較「當前能量」與「周圍 1 秒的平均能量」
-    const historySize = 40; // 比較過去 0.4 秒
-    let history = new Array(historySize).fill(0);
-    let lastBeatTime = -1000;
-
-    for (let i = 0; i < localEnergies.length; i++) {
-        const energy = localEnergies[i];
-        
-        // 計算局部平均
-        const localAvg = history.reduce((a,b)=>a+b) / historySize;
-        
-        // 核心算法：能量必須大於局部平均的 C 倍 (C 是常數，這裡設 1.4)
-        // 且能量本身不能太小 (去除噪音)
-        if (energy > localAvg * 1.4 && energy > 0.1) {
-            const timeMs = i * 10; // 每個點代表 10ms
-            
-            // 防止機關槍：兩個音符至少間隔 200ms
-            if (timeMs - lastBeatTime > 250) {
-                generatedNotes.push({
-                    time: timeMs,
-                    lane: Math.floor(Math.random() * 4), // 隨機軌道
-                    hit: false
-                });
-                lastBeatTime = timeMs;
-            }
-        }
-        
-        history.shift();
-        history.push(energy);
-    }
-
-    document.getElementById('status-text').innerText = `SYNCED: ${generatedNotes.length} BEATS DETECTED`;
-    document.getElementById('status-text').style.animation = 'none';
-    document.getElementById('status-text').style.color = '#fff';
-    document.getElementById('start-btn').style.display = 'block';
-}
-
 function startGame() {
-    document.getElementById('loader').style.display = 'none';
-    activeNotes = JSON.parse(JSON.stringify(generatedNotes));
+    if(CHART_DATA.length === 0) {
+        alert("錯誤：譜面數據是空的！請先去 maker.html 錄製並貼上數據。");
+        return;
+    }
+    document.getElementById('start-screen').style.display = 'none';
     
-    audioSource = audioCtx.createBufferSource();
-    audioSource.buffer = audioBuffer;
-    audioSource.connect(audioCtx.destination);
+    // 載入譜面
+    activeNotes = JSON.parse(JSON.stringify(CHART_DATA));
     
-    startTime = audioCtx.currentTime * 1000 + LEAD_TIME;
-    audioSource.start(audioCtx.currentTime + (LEAD_TIME / 1000));
-    
+    audio.play();
     isPlaying = true;
     requestAnimationFrame(gameLoop);
 }
 
-// --- 3D 繪圖核心 ---
+// 繪圖座標計算
 function getCoords(lane, progress) {
-    // progress 0 = 消失點, 1 = 判定線
     const yStart = canvas.height * VANISH_Y;
     const yHit = canvas.height * HIT_Y;
     const h = yHit - yStart;
-
-    // 計算 Y
     let y;
     if (progress <= 1) {
         y = yStart + (h * progress);
     } else {
-        // 延伸到底部
         const yBot = canvas.height * BTN_Y;
-        y = yHit + (yBot - yHit) * (progress - 1) * 3; // 加速延伸
+        y = yHit + (yBot - yHit) * (progress - 1) * 3; 
     }
-
-    // 計算寬度 (透視)
     const wTop = canvas.width * 0.1;
     const wHit = canvas.width * 0.85;
-    
     let totalW;
     if (progress <= 1) {
         totalW = wTop + (wHit - wTop) * progress;
@@ -276,130 +155,109 @@ function getCoords(lane, progress) {
         const wBot = canvas.width * 1.1;
         totalW = wHit + (wBot - wHit) * (progress - 1) * 3;
     }
-
     const laneW = totalW / 4;
     const xStart = (canvas.width - totalW) / 2;
     const x = xStart + lane * laneW;
-
     return { x, y, w: laneW };
 }
 
 function gameLoop() {
     if(!isPlaying) return;
-    const now = (audioCtx.currentTime * 1000) - startTime + LEAD_TIME;
+    const now = audio.currentTime * 1000;
 
-    // UI Update
-    if(audioBuffer) {
-        let rem = Math.max(0, audioBuffer.duration - (audioCtx.currentTime - (startTime/1000) + (LEAD_TIME/1000)));
-        if (rem === 0) isPlaying = false;
-        const m = Math.floor(rem/60).toString().padStart(2,'0');
-        const s = Math.floor(rem%60).toString().padStart(2,'0');
-        document.getElementById('timer').innerText = `${m}:${s}`;
-    }
+    // UI 更新
+    let rem = Math.max(0, audio.duration - audio.currentTime);
+    const m = Math.floor(rem/60).toString().padStart(2,'0');
+    const s = Math.floor(rem%60).toString().padStart(2,'0');
+    document.getElementById('timer').innerText = `${m}:${s}`;
+    if(audio.ended) isPlaying = false;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // 1. 星空
+    // 背景
     drawStars();
 
-    // 2. 軌道線
+    // 軌道
     ctx.lineWidth = 1;
     ctx.strokeStyle = 'rgba(255,255,255,0.15)';
     for(let i=0; i<=4; i++) {
         const p1 = getCoords(i, 0);
         const p2 = getCoords(i, 1.1);
-        ctx.beginPath();
-        ctx.moveTo(p1.x, p1.y);
-        ctx.lineTo(p2.x, p2.y);
-        ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
     }
 
-    // 3. 實體按鈕 (在判定線後方)
+    // 按鈕
     for(let i=0; i<4; i++) {
         const pTop = getCoords(i, 1.0);
         const pBot = getCoords(i, 1.1);
         const color = LANE_COLORS[i];
-
         ctx.beginPath();
-        ctx.moveTo(pTop.x, pTop.y);
-        ctx.lineTo(pTop.x + pTop.w, pTop.y);
-        ctx.lineTo(pBot.x + pBot.w, pBot.y);
-        ctx.lineTo(pBot.x, pBot.y);
+        ctx.moveTo(pTop.x, pTop.y); ctx.lineTo(pTop.x+pTop.w, pTop.y);
+        ctx.lineTo(pBot.x+pBot.w, pBot.y); ctx.lineTo(pBot.x, pBot.y);
         ctx.closePath();
-
         if (activeKeys[i]) {
-            // 按下特效
-            ctx.fillStyle = color;
-            ctx.globalAlpha = 0.6;
-            ctx.fill();
-            // 光柱
+            ctx.fillStyle = color; ctx.globalAlpha = 0.6; ctx.fill();
             const pFar = getCoords(i, 0);
             const g = ctx.createLinearGradient(0, pTop.y, 0, pFar.y);
             g.addColorStop(0, color); g.addColorStop(1, 'transparent');
             ctx.fillStyle = g; ctx.globalAlpha = 0.3;
-            ctx.beginPath();
-            ctx.moveTo(pTop.x, pTop.y); ctx.lineTo(pTop.x+pTop.w, pTop.y);
-            ctx.lineTo(pFar.x+pFar.w, pFar.y); ctx.lineTo(pFar.x, pFar.y);
-            ctx.fill();
+            ctx.beginPath(); ctx.moveTo(pTop.x, pTop.y); ctx.lineTo(pTop.x+pTop.w, pTop.y);
+            ctx.lineTo(pFar.x+pFar.w, pFar.y); ctx.lineTo(pFar.x, pFar.y); ctx.fill();
         } else {
-            // 靜止
             ctx.fillStyle = '#111'; ctx.globalAlpha = 0.8; ctx.fill();
-            ctx.strokeStyle = color; ctx.globalAlpha = 0.3; ctx.stroke();
+            ctx.strokeStyle = color; ctx.globalAlpha = 0.3; ctx.lineWidth = 2; ctx.stroke();
         }
-        
         ctx.globalAlpha = 1;
         ctx.fillStyle = activeKeys[i] ? '#fff' : color;
-        ctx.font = 'bold 20px Orbitron';
-        ctx.textAlign = 'center';
+        ctx.font = 'bold 20px Orbitron'; ctx.textAlign = 'center';
         ctx.fillText(LANE_KEYS[i], pBot.x + pBot.w/2, pBot.y - 5);
     }
 
-    // 4. 雷射判定線
+    // 判定線
     const hitL = getCoords(0, 1.0);
     const hitR = getCoords(4, 1.0);
-    
     ctx.shadowBlur = 25; ctx.shadowColor = '#00ffff';
     ctx.strokeStyle = 'rgba(0,255,255,0.8)'; ctx.lineWidth = 4;
     ctx.beginPath(); ctx.moveTo(hitL.x - 20, hitL.y); ctx.lineTo(hitR.x + 20, hitR.y); ctx.stroke();
-    
-    ctx.shadowBlur = 0;
-    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.shadowBlur = 0; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
 
-    // 5. 音符 (光束風格)
+
+// 音符
     activeNotes.forEach(n => {
         if(n.hit) return;
-        // 加上 userOffset 進行校準
-        const diff = (n.time + userOffset) - now;
-        const progress = 1 - (diff / LEAD_TIME);
+        const hitTime = n.time + userOffset;
+        const timeDiff = hitTime - now; 
+        const progress = 1 - (timeDiff / LEAD_TIME);
 
         if(progress > 0 && progress < 1.05) {
             const lane = n.lane;
             const color = LANE_COLORS[lane];
             const pHead = getCoords(lane, progress);
-            const pTail = getCoords(lane, progress - 0.2); // 長拖尾
-
-            // 繪製光束
+            const pTail = getCoords(lane, progress - 0.2);
+            
+            // 繪製漸層本體
             const g = ctx.createLinearGradient(0, pTail.y, 0, pHead.y);
-            g.addColorStop(0, 'transparent');
-            g.addColorStop(0.4, color);
-            g.addColorStop(1, '#fff');
-
+            g.addColorStop(0, 'transparent'); 
+            g.addColorStop(0.4, color); 
+            g.addColorStop(1, '#fff'); // 讓尾端稍微白一點保持立體感，但沒有那條硬線
+            
             ctx.fillStyle = g;
-            ctx.beginPath();
-            ctx.moveTo(pTail.x, pTail.y);
+            ctx.beginPath(); 
+            ctx.moveTo(pTail.x, pTail.y); 
             ctx.lineTo(pTail.x+pTail.w, pTail.y);
-            ctx.lineTo(pHead.x+pHead.w, pHead.y);
-            ctx.lineTo(pHead.x, pHead.y);
+            ctx.lineTo(pHead.x+pHead.w, pHead.y); 
+            ctx.lineTo(pHead.x, pHead.y); 
             ctx.fill();
-
-            // 邊框
-            ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.stroke();
-            // 核心亮線
-            ctx.beginPath(); ctx.moveTo(pTail.x+pTail.w/2, pTail.y); ctx.lineTo(pHead.x+pHead.w/2, pHead.y);
-            ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+            
+            // 繪製邊框
+            ctx.strokeStyle = color; 
+            ctx.lineWidth = 1; 
+            ctx.stroke();
+            
+            // *** 原本畫白線的程式碼已經移除了 ***
         }
 
-        if(diff < -200) {
+        if(timeDiff < -200) {
             n.hit = true;
             combo = 0; document.getElementById('combo-num').innerText = 0;
             showJudge("MISS", "#555");
@@ -410,18 +268,15 @@ function gameLoop() {
     requestAnimationFrame(gameLoop);
 }
 
-// --- 粒子 ---
+// 粒子與星空
 function spawnParticles(lane) {
     const p = getCoords(lane, 1.0);
-    const cx = p.x + p.w/2;
-    const cy = p.y;
-    const c = LANE_COLORS[lane];
+    const cx = p.x + p.w/2; const cy = p.y; const c = LANE_COLORS[lane];
     for(let i=0; i<10; i++) particles.push({ x:cx, y:cy, vx:(Math.random()-0.5)*10, vy:(Math.random()-1)*15, life:1, color:c, size:Math.random()*4+2 });
 }
 function updateParticles() {
     for(let i=particles.length-1; i>=0; i--) {
-        let p = particles[i];
-        p.x+=p.vx; p.y+=p.vy; p.vy+=0.5; p.life-=0.05;
+        let p = particles[i]; p.x+=p.vx; p.y+=p.vy; p.vy+=0.5; p.life-=0.05;
         if(p.life<=0) particles.splice(i,1);
         else { ctx.globalAlpha=p.life; ctx.fillStyle=p.color; ctx.fillRect(p.x,p.y,p.size,p.size); }
     }
@@ -430,36 +285,27 @@ function updateParticles() {
 function initStars() { for(let i=0; i<150; i++) stars.push({x:Math.random()*canvas.width, y:Math.random()*canvas.height, s:Math.random()*2, o:Math.random(), d:1}); }
 function drawStars() {
     ctx.fillStyle='#fff';
-    stars.forEach(s=>{ 
-        s.o += 0.01 * s.d; if(s.o>1) s.d=-1; if(s.o<0.2) s.d=1;
-        ctx.globalAlpha=s.o; ctx.fillRect(s.x,s.y,s.s,s.s);
-    });
+    stars.forEach(s=>{ s.o += 0.01 * s.d; if(s.o>1) s.d=-1; if(s.o<0.2) s.d=1; ctx.globalAlpha=s.o; ctx.fillRect(s.x,s.y,s.s,s.s); });
     ctx.globalAlpha=1;
 }
 
-// --- 輸入判定 ---
+// 輸入判定
 function handleInput(lane, isDown) {
     activeKeys[lane] = isDown;
     if(isDown && isPlaying) {
-        const now = (audioCtx.currentTime * 1000) - startTime + LEAD_TIME;
-        // 判定範圍包含 offset
+        const now = audio.currentTime * 1000;
         const note = activeNotes.find(n => !n.hit && n.lane === lane && Math.abs((n.time + userOffset) - now) < 160);
         
         if(note) {
             note.hit = true;
-            combo++;
-            score += 100 + combo * 10;
+            combo++; score += 100 + combo * 10;
             document.getElementById('combo-num').innerText = combo;
             document.getElementById('score').innerText = score.toString().padStart(6,'0');
-            
             const el = document.getElementById('combo-num');
-            el.style.transform = "scale(1.3)";
-            setTimeout(()=>el.style.transform="scale(1)", 100);
-
-            const err = Math.abs((note.time + userOffset) - now);
-            if(err < 60) showJudge("PERFECT", "#0ff");
-            else showJudge("GOOD", "#ff0");
+            el.style.transform = "scale(1.3)"; setTimeout(()=>el.style.transform="scale(1)", 100);
             
+            const diff = Math.abs((note.time + userOffset) - now);
+            if(diff < 60) showJudge("PERFECT", "#0ff"); else showJudge("GOOD", "#ff0");
             spawnParticles(lane);
         }
     }
